@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lordnine Boss Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo-text">
+            <h1>LORDNINE BOSS SPAWN TIME TRACKER</h1>
+            <p id="local-time-display">Local Time: --:--:--</p>
+        </div>
+        
+        <input type="text" id="search-boss" placeholder="Search boss or location..." onkeyup="filterBosses()">
+    </header>
+
+    <div class="main-layout">
+        
+        <div class="boss-list-container">
+            <h2>Boss List</h2>
+            <div id="bosses-container">
+                </div>
+            <div class="list-end-padding"></div>
+        </div>
+
+        <div class="active-timers-container">
+            <h2>Active Timers</h2> 
+            <div id="active-timers-display">
+                <p class="no-timers">No active timers.</p>
+            </div>
+
+            <div class="footer-actions">
+                <p>Last kill time is saved automatically.</p> 
+                <button onclick="saveAllData()">Save All Times</button> 
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
