@@ -9,7 +9,7 @@ const SERVER_TIMEZONE_OFFSET = 8; // UTC+8
 const BOSSES = [
     // --- Bosses Level 60-85 ---
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
-    { id: 'viorent', name: 'Vioret', level: 65, interval: 10, location: 'Crecent Lake' }, 
+    { id: 'viorent', name: 'Viorent', level: 65, interval: 10, location: 'Crecent Lake' }, 
     { id: 'ego', name: 'Ego', level: 70, interval: 21, location: 'Ulan Canyon' }, 
     { id: 'clemantis', name: 'Clemantis', level: 70, interval: 24, fixedSchedule: [
         { day: 1, hour: 11, minute: 30 }, 
@@ -661,3 +661,4 @@ function updateLocalTime() {
 
 setInterval(updateLocalTime, 1000); 
 document.addEventListener('DOMContentLoaded', generateBossUI);
+
