@@ -3,7 +3,7 @@
 // =======================================================
 
 const HOUR_IN_MS = 60 * 60 * 1000;
-const SERVER_TIMEZONE_OFFSET = 8; 
+const SERVER_TIMEZONE_OFFSET = 8; // UTC+8
 
 // IMPORTANT! Level and Location added.
 const BOSSES = [
@@ -35,7 +35,7 @@ const BOSSES = [
     { id: 'amentis', name: 'Amentis', level: 88, interval: 29, location: 'Land of Glory' }, 
     { id: 'baronbraudmore', name: 'Baron Braudmore', level: 88, interval: 32, location: 'Battlefield of Templar' }, 
     { id: 'milavy', name: 'Milavy', level: 90, interval: 24, fixedSchedule: [
-        { day: 6, hour: 15, minute: 0 } 
+        { day: 6, hour: 15, minute: 0 } // Sábado 3:00 PM UTC+8 (Tu Sábado 2:00 AM UTC-5)
     ], location: 'Lower Tomb of Tyriosa 3F' }, 
     
     // --- Bosses Level 93-120 ---
@@ -55,7 +55,7 @@ const BOSSES = [
     { id: 'catena', name: 'Catena', level: 100, interval: 35, location: "Deadman's Land District 3" }, 
     { id: 'auraq', name: 'Auraq', level: 100, interval: 62, fixedSchedule: [
         { day: 5, hour: 22, minute: 0 }, 
-        { day: 3, hour: 21, minute: 0 }  
+        { day: 3, hour: 21, minute: 0 } 
     ], location: 'Garbana Underground Waterway 2' }, 
     { id: 'secreta', name: 'Secreta', level: 100, interval: 62, location: 'Silvergrass Field' }, 
     { id: 'ordo', name: 'Ordo', level: 100, interval: 62, location: 'Silvergrass Field' }, 
@@ -129,45 +129,66 @@ function clearTimer(bossId) {
 
     // Re-initialize fixed timer if it was a fixed boss
     if (boss && boss.fixedSchedule) {
-         startFixedScheduleTimer(boss); 
+        startFixedScheduleTimer(boss); 
     }
     
     updateActivePanel();
 }
 
 // =======================================================
-// 3. FIXED SCHEDULE UTILITIES (NEW)
+// 3. FIXED SCHEDULE UTILITIES (NUEVA LÓGICA ROBUSTA)
 // =======================================================
 
 /**
- * Calculates the next UTC+8 fixed spawn time in milliseconds (Local Time).
+ * Calculates the next fixed spawn time in milliseconds (Local Time)
+ * by comparing current time of the week vs target time of the week in server context (UTC+8).
+ * Esta lógica evita errores de cambio de día por la manipulación de la hora UTC.
  */
 function calculateNextFixedTarget(boss) {
     if (!boss.fixedSchedule) return null;
 
     const now = new Date().getTime();
-    let nextTarget = Infinity; 
+    let nextTarget = Infinity;    
     
-    // Check this week and next week to find the nearest future time
-    for (let weekOffset = 0; weekOffset <= 1; weekOffset++) { 
-        boss.fixedSchedule.forEach(schedule => {
-            let date = new Date();
-            
-            // Set the day of the week, adjusted for the current week or next week (weekOffset * 7)
-            date.setDate(date.getDate() - date.getDay() + schedule.day + (weekOffset * 7));
+    // Constante para una semana en milisegundos
+    const WEEK_IN_MS = 7 * 24 * HOUR_IN_MS; 
+    
+    // 1. Obtener la hora actual ajustada a la zona horaria del SERVIDOR (UTC+8)
+    const nowServerAdjusted = new Date(now + (SERVER_TIMEZONE_OFFSET * HOUR_IN_MS));
+    
+    // 2. Calcular el tiempo actual de la semana en milisegundos (desde Domingo 00:00:00 UTC+8)
+    const currentDayOfWeek = nowServerAdjusted.getUTCDay(); // 0 (Domingo) a 6 (Sábado)
+    const currentTimeOfDayMs = (nowServerAdjusted.getUTCHours() * HOUR_IN_MS) + 
+                               (nowServerAdjusted.getUTCMinutes() * 60 * 1000) + 
+                               (nowServerAdjusted.getUTCSeconds() * 1000);
+                               
+    const currentTimeOfWeekMs = (currentDayOfWeek * 24 * HOUR_IN_MS) + currentTimeOfDayMs;
 
-            // Set the UTC time based on the server time (UTC+8). 
-            // We subtract the offset to get the correct absolute UTC time.
-            date.setUTCHours(schedule.hour - SERVER_TIMEZONE_OFFSET, schedule.minute, 0, 0);
-            const targetTimeMs = date.getTime();
 
-            if (targetTimeMs > now && targetTimeMs < nextTarget) {
-                nextTarget = targetTimeMs;
-            }
-        });
-    }
+    boss.fixedSchedule.forEach(schedule => {
+        // 3. Calcular el tiempo objetivo de la semana en milisegundos (desde Domingo 00:00:00 UTC+8)
+        const targetTimeOfWeekMs = (schedule.day * 24 * HOUR_IN_MS) + 
+                                   (schedule.hour * HOUR_IN_MS) + 
+                                   (schedule.minute * 60 * 1000);
 
-    return (nextTarget !== Infinity) ? nextTarget : null; 
+        // 4. Calcular la diferencia. Si es negativa, la hora pasó esta semana.
+        let differenceMs = targetTimeOfWeekMs - currentTimeOfWeekMs;
+
+        // 5. Si la hora objetivo ha pasado o es exactamente ahora, añadir una semana completa 
+        // para obtener la próxima instancia.
+        if (differenceMs <= 0) {
+            differenceMs += WEEK_IN_MS;
+        }
+
+        // 6. El tiempo objetivo absoluto: 'ahora' más la diferencia calculada
+        const targetTimeMs = now + differenceMs;
+        
+        if (targetTimeMs < nextTarget) {
+            nextTarget = targetTimeMs;
+        }
+    });
+
+    return (nextTarget !== Infinity) ? nextTarget : null;    
 }
 
 
@@ -177,24 +198,83 @@ function calculateNextFixedTarget(boss) {
  */
 function convertFixedSchedule(schedule) {
     const now = new Date();
-    // Create a temporary date and set the UTC time based on the schedule
+    // 1. Crear una fecha temporal y establecer la hora UTC basada en la hora fija del servidor,
+    // permitiendo que el objeto Date ajuste el día automáticamente si es necesario.
     const tempDate = new Date();
     tempDate.setUTCHours(schedule.hour - SERVER_TIMEZONE_OFFSET, schedule.minute, 0, 0);
 
-    // Get the difference in days from now to the scheduled day
+    // 2. Calcular la diferencia en días desde la fecha actual al día programado
     let diff = schedule.day - now.getDay();
-    // Adjust the date to the correct day of the week
-    tempDate.setDate(now.getDate() + diff);
 
-    // Use 'en-US' for English day/time format
-    const dayOfWeek = tempDate.toLocaleDateString('en-US', { weekday: 'long' });
-    const time = tempDate.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: true 
-    });
+    // 3. Ajustar la fecha temporal para que caiga en el día correcto de la semana (Localmente)
+    // Usamos el día que la reaparición cae LOCALMENTE.
+    // Si Milavy (Sáb 15:00 UTC+8) aparece el Dom 02:00 AM local, esto mostrará "Domingo".
+    const currentWeekDay = now.getDay(); // 0=Sun, 6=Sat
+    let targetWeekDay = schedule.day;
     
-    return `${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)} ${time}`;
+    // Si la hora del servidor (UTC+8) es 00:00-07:59, la hora UTC es negativa, 
+    // lo que desplaza el día a la izquierda. Necesitamos corregir la referencia del día local.
+    const utcHour = schedule.hour - SERVER_TIMEZONE_OFFSET;
+    if (utcHour < 0) {
+        // Si el desplazamiento de UTC hace que la hora sea negativa (e.g. 2 AM server),
+        // el día local real es el día anterior al programado (si el servidor está a +8 y tú a -5).
+        // Sin embargo, para la visualización del día, la forma más sencilla es usar el desplazamiento de 13 horas
+        // y ver en qué día cae esa hora.
+        // Pero para simplificar y usar la hora ya calculada:
+        
+        // Creamos una fecha que representa el "spawn" y la convertimos al día de la semana local
+        let dateForDayCalc = new Date();
+        dateForDayCalc.setDate(dateForDayCalc.getDate() - dateForDayCalc.getDay() + schedule.day);
+        dateForDayCalc.setHours(schedule.hour - (SERVER_TIMEZONE_OFFSET - dateForDayCalc.getTimezoneOffset() / 60)); // No recomendado.
+
+        // Usamos la forma sencilla y la manipulación de setUTCHours para que sea consistente
+        let tempDateForDay = new Date();
+        tempDateForDay.setUTCHours(schedule.hour - SERVER_TIMEZONE_OFFSET, schedule.minute, 0, 0);
+
+        // Ajustamos la fecha al día de la semana programado, luego la hora UTC ajustará el día si cruza la medianoche.
+        tempDateForDay.setDate(tempDateForDay.getDate() - tempDateForDay.getDay() + schedule.day);
+
+        // Si la hora local del usuario está en el día anterior al servidor, lo corregimos aquí.
+        // Como el error ya es conocido, evitamos la lógica de setUTCHours en esta función de solo DISPLAY:
+        
+        // Forma CORRECTA de mostrar el DÍA LOCAL:
+        let dateForDisplay = new Date();
+        dateForDisplay.setDate(dateForDisplay.getDate() - dateForDisplay.getDay() + schedule.day);
+        dateForDisplay.setHours(schedule.hour, schedule.minute, 0, 0);
+        
+        // Ajustamos el tiempo con la diferencia de zona horaria para ver el día local real
+        const tzDifference = dateForDisplay.getTimezoneOffset() + (SERVER_TIMEZONE_OFFSET * 60);
+        dateForDisplay.setTime(dateForDisplay.getTime() - (tzDifference * 60 * 1000));
+        
+        const dayOfWeek = dateForDisplay.toLocaleDateString('en-US', { weekday: 'long' });
+        const time = dateForDisplay.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+        });
+        
+        return `${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)} ${time}`;
+
+    } else {
+        // La lógica original para mostrar el día (que es menos problemática para la mayoría de los casos)
+        // La mantengo si es necesaria, pero el bloque 'if' es la nueva corrección de DISPLAY.
+        
+        let dateForDisplay = new Date();
+        dateForDisplay.setDate(dateForDisplay.getDate() - dateForDisplay.getDay() + schedule.day);
+        dateForDisplay.setHours(schedule.hour, schedule.minute, 0, 0);
+        
+        const tzDifference = dateForDisplay.getTimezoneOffset() + (SERVER_TIMEZONE_OFFSET * 60);
+        dateForDisplay.setTime(dateForDisplay.getTime() - (tzDifference * 60 * 1000));
+        
+        const dayOfWeek = dateForDisplay.toLocaleDateString('en-US', { weekday: 'long' });
+        const time = dateForDisplay.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+        });
+        
+        return `${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)} ${time}`;
+    }
 }
 
 // =======================================================
@@ -285,6 +365,7 @@ function startFixedScheduleTimer(boss) {
         clearInterval(countdownIntervals[boss.id]);
     }
     
+    // Note: We only need to call updateActivePanel periodically for fixed timers
     countdownIntervals[boss.id] = setInterval(updateActivePanel, 1000); 
 
     updateActivePanel();
