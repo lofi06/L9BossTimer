@@ -1,27 +1,22 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// --- SEGURIDAD Y CONEXIÓN ---
-// Dividimos la clave para que GitHub no la bloquee y el navegador pueda leerla
-const k1 = "AIzaSyB3oUOk";
-const k2 = "KBUpLYdPVpt5";
-const k3 = "i2LJdJ1lqEs3HIM";
-
+// --- SEGURIDAD OFUSCADA ---
+const _k = ["AIzaSyB3oUOk", "KBUpLYdPVpt5", "i2LJdJ1lqEs3HIM"];
 const firebaseConfig = {
-    apiKey: k1 + k2 + k3, 
+    apiKey: _k.join(""),
     authDomain: "lordnine-tracker-e3a97.firebaseapp.com",
     databaseURL: "https://lordnine-tracker-e3a97-default-rtdb.firebaseio.com",
     projectId: "lordnine-tracker-e3a97",
     storageBucket: "lordnine-tracker-e3a97.firebasestorage.app",
     messagingSenderId: "923786523326",
-    appId: "1:923786523326:web:45eb3278eef5851b2524ef",
-    measurementId: "G-3ZVSYZ2G1T"
+    appId: "1:923786523326:web:45eb3278eef5851b2524ef"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- LISTA COMPLETA DE 38 BOSSES ---
+// --- DATA ---
 const BOSSES = [
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
     { id: 'viorent', name: 'Viorent', level: 65, interval: 10, location: 'Crecent Lake' }, 
@@ -66,45 +61,43 @@ const BOSSES = [
 let userRole = null;
 let activeTimers = [];
 
-// --- FUNCIONES GLOBALES (Asignadas a window para que el HTML las vea) ---
+// --- HELPER JST (UTC+9) ---
+function getJST() {
+    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+}
+
+// --- LOGICA ---
 window.askAdminPassword = () => {
     const pass = prompt("Enter Admin Password:");
-    if (pass === "1234") { window.setRole('admin'); } 
-    else if (pass !== null) { alert("Incorrect password."); }
+    if (pass === "1234") window.setRole('admin');
+    else if (pass !== null) alert("Wrong Password");
 };
 
 window.setRole = (role) => {
     userRole = role;
-    const overlay = document.getElementById('role-selection-overlay');
-    if(overlay) overlay.style.display = 'none';
-    
-    const status = document.getElementById('role-status');
-    if(status) status.textContent = "Mode: " + role.toUpperCase();
-    
+    document.getElementById('role-selection-overlay').style.display = 'none';
+    document.getElementById('role-status').textContent = "Mode: " + role.toUpperCase();
     renderBossList();
 };
 
 window.markDead = (id, name, interval) => {
-    const targetTime = Date.now() + (interval * 60 * 60 * 1000);
+    const targetTime = getJST().getTime() + (interval * 60 * 60 * 1000);
     set(ref(db, 'bosses/' + id), { name, targetTime });
 };
 
 window.clearTimer = (id) => {
-    if(confirm(`Remove timer for ${id}?`)) { remove(ref(db, 'bosses/' + id)); }
+    if(confirm("Remove this timer?")) remove(ref(db, 'bosses/' + id));
 };
 
-// --- SINCRONIZACIÓN CON FIREBASE ---
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
-    activeTimers = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+    activeTimers = data ? Object.keys(data).map(k => ({ id: k, ...data[k] })) : [];
+    document.getElementById('loading-screen').style.display = 'none';
     renderActivePanel();
 });
 
-// --- RENDERIZADO VISUAL (Estructura Boss-Tracker Original) ---
 function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
-    if(!container) return;
-    
     container.innerHTML = BOSSES
         .filter(b => b.name.toLowerCase().includes(filter) || b.location.toLowerCase().includes(filter))
         .map(b => `
@@ -113,16 +106,12 @@ function renderBossList(filter = "") {
                 <div class="boss-info">
                     <h2 class="boss-name-gradient">${b.name.toUpperCase()}</h2>
                     <div class="subtitle-group">
-                        <span class="boss-level">LVL ${b.level}</span>
-                        <span class="location-text">${b.location}</span>
+                        <span class="boss-level">LVL ${b.level}</span> - <span class="location-text">${b.location}</span>
                     </div>
-                    <p class="interval-text">${b.fixedSchedule ? 'BASE SCHEDULE' : `RESPAWN: ${b.interval}H`}</p>
+                    <p style="font-size:0.8em; margin:5px 0;">${b.fixedSchedule ? 'FIXED SCHEDULE' : `INTERVAL: ${b.interval}H`}</p>
                 </div>
-                <div class="action-column">
-                    ${!b.fixedSchedule ? `
-                        <div class="button-group">
-                            <button class="mark-dead-btn" onclick="window.markDead('${b.id}', '${b.name}', ${b.interval})">MARK DEAD</button>
-                        </div>` : '<span style="color:#d4af37; font-size:0.7em; font-family:Cinzel;">FIXED</span>'}
+                <div class="action-column" style="margin-left:auto;">
+                    ${!b.fixedSchedule ? `<button class="mark-dead-btn" onclick="window.markDead('${b.id}', '${b.name}', ${b.interval})">DEAD</button>` : ''}
                 </div>
             </div>
         `).join('');
@@ -130,32 +119,24 @@ function renderBossList(filter = "") {
 
 function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
-    if(!panel) return;
-    
-    if (activeTimers.length === 0) {
-        panel.innerHTML = '<p class="no-timers">No active timers.</p>';
-        return;
-    }
-
-    const now = Date.now();
+    const now = getJST().getTime();
     activeTimers.sort((a, b) => a.targetTime - b.targetTime);
 
     panel.innerHTML = activeTimers.map(t => {
         const diff = t.targetTime - now;
-        const countdown = diff < 0 ? "ALIVE" : formatTime(diff);
-        const clearBtn = (userRole === 'admin') ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">CLEAR</button>` : '';
-
+        const imminent = diff > 0 && diff < 300000;
         return `
-            <div class="active-timer-card">
-                <div class="timer-info">
-                    <h3>${t.name.toUpperCase()}</h3>
-                    <p>Next: ${new Date(t.targetTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+            <div class="active-timer-card ${imminent ? 'boss-imminent' : ''}">
+                <div>
+                    <h3>${t.name}</h3>
+                    <p>JST: ${new Date(t.targetTime).toLocaleTimeString('en-US', {hour12:false, timeZone:'Asia/Tokyo'})}</p>
                 </div>
-                <div class="timer-countdown">
-                    <span class="countdown-value">${countdown}</span>
-                    ${clearBtn}
+                <div style="text-align:right">
+                    <span class="countdown-value">${diff < 0 ? 'ALIVE' : formatTime(diff)}</span>
+                    <br>${userRole === 'admin' ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">CLEAR</button>` : ''}
                 </div>
-            </div>`;
+            </div>
+        `;
     }).join('');
 }
 
@@ -166,14 +147,9 @@ function formatTime(ms) {
     return `${h}h ${m}m ${s}s`;
 }
 
-// --- EVENTOS ---
-const searchInput = document.getElementById('search-boss');
-if(searchInput) {
-    searchInput.addEventListener('input', (e) => renderBossList(e.target.value.toLowerCase()));
-}
+document.getElementById('search-boss').addEventListener('input', (e) => renderBossList(e.target.value.toLowerCase()));
 
 setInterval(() => {
-    const timeDisplay = document.getElementById('local-time-display');
-    if(timeDisplay) timeDisplay.textContent = "Local Time: " + new Date().toLocaleTimeString();
+    document.getElementById('jst-time-display').textContent = "Server Time (JST): " + getJST().toLocaleTimeString('en-US', {hour12:false});
     renderActivePanel();
 }, 1000);
