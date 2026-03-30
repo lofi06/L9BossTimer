@@ -67,7 +67,6 @@ header {
     border-right: 1px solid #30363d; 
     display: flex; 
     flex-direction: column; 
-    background: #161b22; 
 }
 
 .active-timers-container { 
@@ -168,8 +167,7 @@ header {
     border: none; 
     padding: 4px 10px; 
     border-radius: 4px; 
-    cursor: pointer; 
-    font-weight: 700;
+    cursor: pointer;
     font-size: 0.70em;
     width: 100%;
 }
