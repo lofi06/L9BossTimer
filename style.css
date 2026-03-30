@@ -1,215 +1,132 @@
 /* =======================================================
-   GENERAL STYLES & FONTS
+   GENERAL & LAYOUT
    ======================================================= */
 body {
     font-family: 'Roboto', sans-serif;
     background-color: #0d1117;
-    color: #c9d1d9; 
+    color: #c9d1d9;
     margin: 0;
     height: 100vh;
-    overflow: hidden; /* Evita el scroll global para usar scroll interno */
+    overflow: hidden;
 }
 
 header {
-    background-color: #161b22; 
-    padding: 15px 40px;
+    background-color: #161b22;
+    padding: 25px 40px; /* Más aire para que no pegue arriba */
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #30363d;
-    height: 70px;
-    box-sizing: border-box;
 }
 
 .logo-text h1 {
     font-family: 'Cinzel', serif;
     color: #d4af37;
-    font-size: 1.4em;
-    margin: 0;
+    font-size: 1.5em;
+    margin: 0 0 5px 0;
     letter-spacing: 1px;
 }
 
 .server-time {
-    color: #8b949e; 
-    font-size: 0.85em;
-    font-family: 'Roboto Mono', monospace;
-}
-
-/* =======================================================
-   MAIN LAYOUT (TWO COLUMNS)
-   ======================================================= */
-.main-layout {
-    display: flex;
-    height: calc(100vh - 70px); /* Resta la altura del header */
-    gap: 0;
-}
-
-/* Columna Izquierda: Lista de Bosses */
-.boss-list-container {
-    flex: 3;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #30363d;
-}
-
-/* Columna Derecha: Timers Activos */
-.active-timers-container {
-    flex: 1;
-    background-color: #0d1117;
-    display: flex;
-    flex-direction: column;
-    min-width: 320px;
-}
-
-.section-header {
-    background-color: #161b22;
-    padding: 15px 20px;
-    border-bottom: 1px solid #30363d;
-}
-
-.section-header h2 {
-    font-family: 'Cinzel', serif;
-    font-size: 1.1em;
-    margin: 0;
-    color: #d4af37;
-    text-align: center;
-}
-
-/* Contenedores con Scroll Independiente */
-#bosses-container, #active-timers-display {
-    overflow-y: auto;
-    flex-grow: 1;
-    padding: 10px;
-}
-
-/* Personalización del Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0d1117; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #d4af37; }
-
-/* =======================================================
-   BOSS CARDS (LIST)
-   ======================================================= */
-.boss-tracker {
-    display: flex;
-    align-items: center;
-    padding: 12px 15px;
-    border-bottom: 1px solid #21262d;
-    transition: 0.2s;
-}
-
-.boss-tracker:hover { background-color: #161b22; }
-
-.boss-image {
-    width: 50px; height: 50px;
-    border-radius: 4px;
-    border: 1px solid #d4af37;
-    margin-right: 15px;
-    object-fit: cover;
-}
-
-.boss-name-gradient {
-    font-family: 'Cinzel', serif;
-    font-size: 1.1em;
-    color: #e5d8b6;
-    margin: 0;
-}
-
-.subtitle-group {
-    font-size: 0.8em;
-    margin-top: 3px;
-}
-
-.boss-level { color: #d4af37; font-weight: bold; }
-.location-text { color: #4CAF50; }
-
-.action-column {
-    margin-left: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-/* Botones con los colores del CSS antiguo */
-.mark-dead-btn {
-    font-family: 'Cinzel', serif;
-    background-color: #375a3c;
-    color: white;
-    border: none; padding: 6px 12px;
-    border-radius: 4px; cursor: pointer;
-    transition: 0.2s;
-}
-.mark-dead-btn:hover { background-color: #4c7752; }
-
-.set-btn {
-    font-family: 'Cinzel', serif;
-    background-color: #805d93;
-    color: white;
-    border: none; padding: 4px 8px;
-    border-radius: 4px; cursor: pointer;
-}
-
-/* =======================================================
-   ACTIVE TIMER CARDS (PANEL)
-   ======================================================= */
-.active-timer-card {
-    background-color: #161b22;
-    margin-bottom: 10px;
-    padding: 12px;
-    border-radius: 6px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-left: 3px solid #30363d;
-}
-
-/* Estado Imminente: Cuando faltan menos de 5 min */
-.boss-imminent {
-    border-left-color: #ff7b72;
-    animation: pulse-border 2s infinite;
-}
-
-@keyframes pulse-border {
-    0% { box-shadow: 0 0 0px rgba(255, 123, 114, 0); }
-    50% { box-shadow: 0 0 10px rgba(255, 123, 114, 0.3); }
-    100% { box-shadow: 0 0 0px rgba(255, 123, 114, 0); }
-}
-
-.countdown-value {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 1.2em;
-    font-weight: bold;
-}
-
-.clear-btn {
-    background: transparent;
     color: #8b949e;
-    border: 1px solid #30363d;
-    cursor: pointer;
-    border-radius: 3px;
-    padding: 2px 5px;
-    font-size: 0.8em;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9em;
+    margin: 0;
 }
-.clear-btn:hover { color: #ff7b72; border-color: #ff7b72; }
 
-/* Buscador */
 #search-boss {
     background: #0d1117;
     border: 1px solid #30363d;
     color: white;
-    padding: 8px 15px;
-    border-radius: 20px;
+    padding: 10px 15px;
+    border-radius: 6px;
     width: 250px;
     transition: 0.3s;
 }
-#search-boss:focus { border-color: #d4af37; outline: none; width: 300px; }
 
-.fixed-badge {
-    font-size: 0.7em;
-    background: #d4af37;
-    color: #0d1117;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: bold;
+#search-boss:focus { border-color: #d4af37; outline: none; }
+
+.main-layout {
+    display: flex;
+    height: calc(100vh - 100px);
+}
+
+/* =======================================================
+   COLUMNS & SCROLL
+   ======================================================= */
+.boss-list-container { flex: 3; border-right: 1px solid #30363d; display: flex; flex-direction: column; }
+.active-timers-container { flex: 1; min-width: 350px; display: flex; flex-direction: column; background: #0d1117; }
+
+.section-header { padding: 15px; border-bottom: 1px solid #30363d; background: #161b22; }
+.section-header h2 { font-family: 'Cinzel', serif; color: #d4af37; margin: 0; font-size: 1.1em; text-align: center; }
+
+#bosses-container, #active-timers-display { overflow-y: auto; flex-grow: 1; padding: 15px; }
+
+/* =======================================================
+   BOSS CARDS
+   ======================================================= */
+.boss-tracker {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #21262d;
+    transition: 0.2s;
+}
+.boss-tracker:hover { background: #161b22; }
+
+.boss-image { width: 55px; height: 55px; border: 1px solid #d4af37; border-radius: 4px; margin-right: 15px; }
+
+.boss-info h3 { font-family: 'Cinzel', serif; color: #e5d8b6; margin: 0; font-size: 1.2em; }
+.subtitle-group { font-size: 0.85em; margin: 4px 0; }
+.boss-level { color: #d4af37; font-weight: bold; border-right: 1px solid #333; padding-right: 8px; margin-right: 8px; }
+.location-text { color: #4CAF50; }
+
+.fixed-schedule-list { font-size: 0.8em; color: #d4af37; margin-top: 4px; display: block; font-weight: bold; }
+.interval-text { font-size: 0.8em; color: #8b949e; }
+
+.action-column { margin-left: auto; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+
+/* Inputs y Botones */
+input[type="datetime-local"] {
+    background: #161b22; color: #d4af37; border: 1px solid #30363d;
+    padding: 4px; border-radius: 4px; font-family: 'Roboto Mono'; font-size: 0.8em;
+}
+
+.mark-dead-btn { background: #375a3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-family: 'Cinzel'; }
+.set-btn { background: #805d93; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: 'Cinzel'; font-size: 0.8em; }
+
+/* =======================================================
+   ACTIVE TIMERS PANEL
+   ======================================================= */
+.active-timer-card {
+    background: #161b22; margin-bottom: 12px; padding: 15px; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-left: 4px solid #30363d;
+}
+
+.active-timer-card.imminent { border-left-color: #ff7b72; animation: pulse 2s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 10px rgba(255, 123, 114, 0.2); } }
+
+.timer-info h4 { font-family: 'Cinzel', serif; color: #e5d8b6; margin: 0; font-size: 1em; }
+.timer-info p { font-size: 0.75em; color: #8b949e; margin: 2px 0; }
+
+.timer-values { text-align: right; }
+.countdown-value { font-family: 'Roboto Mono', monospace; font-size: 1.25em; color: #4CAF50; font-weight: bold; display: block; }
+.countdown-value.urgent { color: #ff7b72; }
+
+.clear-btn {
+    background: #21262d; border: 1px solid #d4af37; color: #d4af37;
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    font-weight: bold; margin-top: 8px; transition: 0.2s;
+}
+.clear-btn:hover { background: #d4af37; color: #0d1117; }
+
+/* =======================================================
+   FOOTER STRANGERZ
+   ======================================================= */
+.footer-actions { padding: 20px; border-top: 1px solid #30363d; display: flex; justify-content: center; }
+.guild-tag {
+    font-family: 'Cinzel', serif; font-size: 1.1em; color: #d4af37;
+    border: 1px solid #d4af37; padding: 6px 25px; background: rgba(212, 175, 55, 0.05);
+    letter-spacing: 2px;
 }
