@@ -153,8 +153,7 @@ onValue(ref(db, 'bosses'), (snapshot) => {
 
 // ACCIONES
 window.markDead = (id) => {
-    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-    set(ref(db, 'bosses/' + id), { deathTime: nowJST.toISOString() });
+    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 };
 
 window.setManualTime = (id) => {
@@ -180,9 +179,15 @@ window.setManualTime = (id) => {
             const [hour, minute] = timePart.split(":").map(Number);
             
             // Crear fecha como JST y convertir a UTC correctamente
-            const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 9, minute));
+            const localDate = new Date(input.value);
+
+            // Convertir de LOCAL → JST → UTC
+            const jstOffset = 9 * 60; // minutos
+            const localOffset = localDate.getTimezoneOffset(); // Colombia ~ +300
             
-            set(ref(db, 'bosses/' + id), { deathTime: utcDate.toISOString() });
+            const corrected = new Date(localDate.getTime() + (localOffset + jstOffset) * 60000);
+            
+            set(ref(db, 'bosses/' + id), { deathTime: corrected.toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
