@@ -12,7 +12,7 @@ body {
     margin: 0;
     height: 100vh;
     overflow: hidden;
-    font-size: 0.95em; /* Reducción general de todas las fuentes */
+    font-size: 1.0em; /* Reducción general de todas las fuentes */
 }
 
 /* =======================================================
@@ -20,7 +20,7 @@ body {
    ======================================================= */
 header {
     background-color: #161b22;
-    padding: 10px 30px; /* Reducido para ahorrar espacio vertical */
+    padding: 9px 30px; /* Reducido para ahorrar espacio vertical */
     display: flex;
     justify-content: space-between;
     align-items: center;
