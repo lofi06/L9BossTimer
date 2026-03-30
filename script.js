@@ -84,17 +84,22 @@ function calculateNextFixedTarget(boss) {
 
 function formatTime(ms) {
     if (ms <= 0) return "ALIVE";
-    const seconds = Math.floor((ms / 1000) % 60);
-    const minutes = Math.floor((ms / (1000 * 60)) % 60);
-    const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
 
-    let parts = [];
-    if (days > 0) parts.push(`${days}d`);
-    parts.push(`${String(hours).padStart(2, '0')}h`);
-    parts.push(`${String(minutes).padStart(2, '0')}m`);
-    parts.push(`${String(seconds).padStart(2, '0')}s`);
-    return parts.join(' ');
+    const totalSeconds = Math.floor(ms / 1000);
+    const seconds = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const minutes = totalMinutes % 60;
+    const totalHours = Math.floor(totalMinutes / 60);
+    const hours = totalHours % 24;
+    const days = Math.floor(totalHours / 24);
+
+    //  CASO 1: más de 24h → días, horas, minutos
+    if (days > 0) {
+        return `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
+    }
+
+    //  CASO 2: menos de 24h → horas, minutos, segundos
+    return `${String(totalHours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
 // --- FIREBASE LOGIC ---
@@ -217,7 +222,14 @@ function renderActivePanel() {
             <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
                 <div class="timer-info">
                     <h3>${t.name}</h3>
-                    <p>Next: ${new Date(t.targetTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</p>
+                    <p>Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
+                        timeZone: 'Asia/Tokyo',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    })}</p>
                 </div>
                 <div class="timer-values" style="text-align:right">
                     <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
