@@ -8,11 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="role-selection-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; font-family:'Cinzel', serif;">
-        <h2 style="color:#ffcc00; margin-bottom:20px; letter-spacing: 2px;">SELECT YOUR ROLE</h2>
-        <div style="display:flex; gap:20px;">
-            <button onclick="window.askAdminPassword()" style="padding:15px 35px; background:#ffcc00; border:none; cursor:pointer; font-weight:bold; color:black; border-radius:4px; font-family:'Cinzel';">ADMIN</button>
-            <button onclick="window.setRole('user')" style="padding:15px 35px; background:#444; color:white; border:none; cursor:pointer; font-weight:bold; border-radius:4px; font-family:'Cinzel';">USER</button>
+    <div id="role-selection-overlay">
+        <div class="overlay-content">
+            <h2>SELECT YOUR ROLE</h2>
+            <div class="role-buttons">
+                <button onclick="window.askAdminPassword()" class="admin-btn">ADMIN</button>
+                <button onclick="window.setRole('user')" class="user-btn">USER</button>
+            </div>
         </div>
     </div>
 
@@ -26,18 +28,18 @@
 
     <div class="main-layout">
         <div class="boss-list-container">
-            <h2>BOSS LIST</h2>
+            <h2>Boss List</h2>
             <div id="bosses-container"></div>
             <div class="list-end-padding"></div>
         </div>
 
         <div class="active-timers-container">
-            <h2>ACTIVE TIMERS</h2> 
+            <h2>Active Timers</h2> 
             <div id="active-timers-display">
                 <p class="no-timers">No active timers.</p>
             </div>
             <div class="footer-actions">
-                <p id="role-status" style="color:#ffcc00; font-size:0.8em; margin-top: 15px; font-family:'Roboto';">Mode: Selection Required</p>
+                <p id="role-status">Mode: Selection Required</p>
             </div>
         </div>
     </div>
