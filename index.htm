@@ -3,47 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lordnine Boss Tracker - Strangerz Edition</title>
+    <title>Lordnine JP Boss Tracker - Strangerz</title>
+    
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="loading-screen">
-        <div class="loader"></div>
-        <p>INITIALIZING STRANGERZ DATABASE...</p>
-    </div>
-
-    <div id="role-selection-overlay">
-        <div class="overlay-content">
-            <h2>SELECT YOUR ROLE</h2>
-            <div class="role-buttons">
-                <button onclick="window.askAdminPassword()" class="admin-btn">ADMIN</button>
-                <button onclick="window.setRole('user')" class="user-btn">USER</button>
-            </div>
-        </div>
-    </div>
-
     <header>
         <div class="logo-text">
-            <h1>LORDNINE BOSS TRACKER</h1>
-            <p id="jst-time-display">Server Time (JST): --:--:--</p>
+            <h1>LORDNINE BOSS SPAWN TRACKER</h1>
+            <p id="jst-time-display" class="server-time">Server Time (JST): --:--:--</p>
         </div>
-        <input type="text" id="search-boss" placeholder="Search boss or location...">
+        
+        <input type="text" id="search-boss" placeholder="Search boss, level or map...">
     </header>
 
     <div class="main-layout">
+        
         <div class="boss-list-container">
-            <h2>BOSS LIST</h2>
-            <div id="bosses-container"></div>
+            <div class="section-header">
+                <h2>WORLD BOSSES</h2>
+            </div>
+            <div id="bosses-container">
+                <p class="loading-msg">Loading boss data...</p>
+            </div>
+            <div class="list-end-padding"></div>
         </div>
 
         <div class="active-timers-container">
-            <h2>ACTIVE TIMERS</h2> 
-            <div id="active-timers-display">
-                <p class="no-timers">No active timers.</p>
+            <div class="section-header">
+                <h2>ACTIVE TIMERS</h2>
             </div>
-            <div class="footer-info">
-                <p id="role-status">Mode: Selection Required</p>
+            <div id="active-timers-display">
+                <p class="no-timers">No bosses marked yet.</p>
+            </div>
+
+            <div class="footer-actions">
+                <p>Synced with Firebase Cloud</p> 
+                <div class="guild-tag">GUILD: STRANGERZ</div>
             </div>
         </div>
     </div>
