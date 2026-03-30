@@ -1,8 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+// --- CONFIGURACIÓN SEGURA DE FIREBASE ---
+// Cargamos la clave desde la variable de entorno que definimos en GitHub
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+
+if (!FIREBASE_API_KEY) {
+    console.error("FIREBASE_API_KEY no detectada. Asegúrate de configurarla en GitHub Secrets.");
+    alert("Error de Configuración: La API Key de Firebase no está configurada.");
+}
+
 const firebaseConfig = {
-    apiKey: "AIzaSyB3oUOkKBUpLYdPVpt5i2LJdJ1lqEs3HIM",
+    apiKey: FIREBASE_API_KEY,
     authDomain: "lordnine-tracker-e3a97.firebaseapp.com",
     databaseURL: "https://lordnine-tracker-e3a97-default-rtdb.firebaseio.com",
     projectId: "lordnine-tracker-e3a97",
@@ -11,6 +20,9 @@ const firebaseConfig = {
     appId: "1:923786523326:web:45eb3278eef5851b2524ef",
     measurementId: "G-3ZVSYZ2G1T"
 };
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
@@ -148,3 +160,37 @@ setInterval(() => {
     document.getElementById('local-time-display').textContent = "Local Time: " + new Date().toLocaleTimeString();
     renderActivePanel();
 }, 1000);
+// Esta función ahora genera la estructura .boss-tracker exacta que tu style.css espera.
+function renderBossList(filter = "") {
+    const container = document.getElementById('bosses-container');
+    container.innerHTML = BOSSES
+        .filter(b => b.name.toLowerCase().includes(filter) || b.location.toLowerCase().includes(filter))
+        .map(b => {
+            // Estructura .boss-tracker original
+            return `
+            <div class="boss-tracker ${b.fixedSchedule ? 'fixed-schedule' : ''}" id="tracker-${b.id}">
+                <img src="images/${b.id}.png" class="boss-image" onerror="this.src='images/placeholder.png';">
+                
+                <div class="boss-info">
+                    <h2 class="boss-name-gradient">${b.name.toUpperCase()}</h2>
+                    <div class="subtitle-group">
+                        <span class="boss-level">LVL ${b.level}</span>
+                        <span class="location-text">${b.location}</span>
+                    </div>
+                    <p class="interval-text">${b.fixedSchedule ? 'BASE SCHEDULE (UTC+8)' : `RESPAWN EVERY: ${b.interval}H`}</p>
+                    <input type="datetime-local" id="time-input-${b.id}" class="manual-time-input" style="display:none; margin-top:10px;">
+                </div>
+
+                <div class="action-column">
+                    ${!b.fixedSchedule ? `
+                        <div class="button-group">
+                            <button class="mark-dead-btn" onclick="window.markDead('${b.id}', '${b.name}', ${b.interval})">MARK DEAD</button>
+                            <button class="set-btn" onclick="window.openSetModal('${b.id}')">SET</button>
+                        </div>` : '<span class="fixed-badge">BASE SCHEDULE</span>'}
+                </div>
+            </div>`;
+        }).join('');
+}
+
+// ... (El resto del script con renderActivePanel, formatTime, Eventos de Búsqueda y Reloj IGUAL QUE ANTES) ...
+// ... (Copiar las funciones renderActivePanel, formatTime y el bloque setInterval/search-boss de la respuesta anterior) ...
