@@ -18,6 +18,7 @@ const db = getDatabase(app);
 // --- VARIABLES GLOBALES ---
 const HOUR_IN_MS = 60 * 60 * 1000;
 const DAY_IN_MS = 24 * HOUR_IN_MS;
+const WEEK_IN_MS = 7 * DAY_IN_MS;
 
 const BOSSES = [
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
