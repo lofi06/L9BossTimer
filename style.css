@@ -188,6 +188,14 @@ header {
     text-shadow: 0 0 4px rgba(255,255,255,0.25);
 }
 
+.mark-dead-btn:hover {
+    box-shadow: 0 0 8px rgba(80, 200, 120, 0.6);
+}
+
+.set-btn:hover {
+    box-shadow: 0 0 8px rgba(180, 120, 255, 0.6);
+}
+
 .fixed-badge {
     color: #d4af37;
     font-weight: bold;
