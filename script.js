@@ -59,7 +59,6 @@ const BOSSES = [
 let userRole = null;
 let activeTimersFromFirebase = [];
 
-// --- GESTIÓN DE ROLES ---
 window.askAdminPassword = () => {
     const pass = prompt("Enter Admin Password:");
     if (pass === "1234") { window.setRole('admin'); } 
@@ -74,7 +73,6 @@ window.setRole = (role) => {
     renderActivePanel();
 };
 
-// --- SINCRONIZACIÓN FIREBASE ---
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
     activeTimersFromFirebase = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
@@ -90,7 +88,6 @@ window.clearTimer = (id) => {
     if(confirm(`Clear timer for ${id}?`)) { remove(ref(db, 'bosses/' + id)); }
 };
 
-// --- RENDERIZADO VISUAL ---
 function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
     container.innerHTML = BOSSES
@@ -98,9 +95,9 @@ function renderBossList(filter = "") {
         .map(b => `
             <div class="boss-card">
                 <div class="boss-info">
-                    <h3 class="boss-name-gradient">${b.name.toUpperCase()}</h3>
-                    <p class="lvl-text">LVL ${b.level} | <span style="color: #2ecc71;">${b.location}</span></p>
-                    <p class="respawn-info">${b.fixedSchedule ? 'BASE SCHEDULE (UTC+8)' : `RESPAWN EVERY: ${b.interval}H`}</p>
+                    <h3>${b.name.toUpperCase()}</h3>
+                    <p>LVL ${b.level} | <span class="location-tag">${b.location}</span></p>
+                    <p class="respawn-info">${b.fixedSchedule ? 'BASE SCHEDULE' : `RESPAWN: ${b.interval}H`}</p>
                 </div>
                 <div class="boss-actions">
                     ${!b.fixedSchedule ? `<button class="mark-dead-btn" onclick="window.markDead('${b.id}', '${b.name}', ${b.interval})">MARK DEAD</button>` : ''}
@@ -126,16 +123,14 @@ function renderActivePanel() {
         const clearBtn = (userRole === 'admin') ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">CLEAR</button>` : '';
 
         return `
-            <div class="active-timer-card">
-                <div class="timer-main">
-                    <div>
-                        <h3>${t.name.toUpperCase()}</h3>
-                        <p class="next-spawn">Next: ${new Date(t.targetTime).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
-                    </div>
-                    <div class="timer-right">
-                        <span class="countdown-value">${countdown}</span>
-                        ${clearBtn}
-                    </div>
+            <div class="active-timer-card ${diff < 0 ? 'boss-alive' : ''}">
+                <div class="timer-info">
+                    <h3>${t.name.toUpperCase()}</h3>
+                    <p>Next: ${new Date(t.targetTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                </div>
+                <div class="timer-countdown">
+                    <span class="countdown-value">${countdown}</span>
+                    ${clearBtn}
                 </div>
             </div>`;
     }).join('');
@@ -145,10 +140,9 @@ function formatTime(ms) {
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
     const s = Math.floor((ms % 60000) / 1000);
-    return `${h.toString().padStart(2,'0')}h ${m.toString().padStart(2,'0')}m ${s.toString().padStart(2,'0')}s`;
+    return `${h}h ${m}m ${s}s`;
 }
 
-// Eventos
 document.getElementById('search-boss').addEventListener('keyup', (e) => renderBossList(e.target.value.toLowerCase()));
 setInterval(() => {
     document.getElementById('local-time-display').textContent = "Local Time: " + new Date().toLocaleTimeString();
