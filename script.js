@@ -67,18 +67,34 @@ function getJST() {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
 }
 
+function getNow() {
+    return Date.now();
+}
+
 function calculateNextFixedTarget(boss) {
-    const nowJST = getJST();
-    const WEEK_IN_MS = 7 * DAY_IN_MS; 
-    const currentTimeOfWeekMs = (nowJST.getDay() * DAY_IN_MS) + (nowJST.getHours() * HOUR_IN_MS) + (nowJST.getMinutes() * 60000);
+    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    const WEEK_IN_MS = 7 * DAY_IN_MS;
+
+    const currentTimeOfWeekMs =
+        (nowJST.getDay() * DAY_IN_MS) +
+        (nowJST.getHours() * HOUR_IN_MS) +
+        (nowJST.getMinutes() * 60000);
 
     let nextTarget = Infinity;
+
     boss.fixedSchedule.forEach(sch => {
-        const targetMs = (sch.day * DAY_IN_MS) + (sch.hour * HOUR_IN_MS) + (sch.minute * 60000);
+        const targetMs =
+            (sch.day * DAY_IN_MS) +
+            (sch.hour * HOUR_IN_MS) +
+            (sch.minute * 60000);
+
         let diff = targetMs - currentTimeOfWeekMs;
         if (diff <= 0) diff += WEEK_IN_MS;
-        if (nowJST.getTime() + diff < nextTarget) nextTarget = nowJST.getTime() + diff;
+
+        const candidate = nowJST.getTime() + diff;
+        if (candidate < nextTarget) nextTarget = candidate;
     });
+
     return nextTarget;
 }
 
@@ -119,7 +135,7 @@ onValue(ref(db, 'bosses'), (snapshot) => {
             if (boss && data[id].deathTime) {
                 const deathTime = new Date(data[id].deathTime).getTime();
                 let target = deathTime + (boss.interval * HOUR_IN_MS);
-                const now = getJST().getTime();
+                const now = getNow();
                 while (target < now) { target += (boss.interval * HOUR_IN_MS); }
                 activeTimers.push({ id: boss.id, name: boss.name, targetTime: target, isFixed: false });
             }
@@ -130,7 +146,7 @@ onValue(ref(db, 'bosses'), (snapshot) => {
 
 // ACCIONES
 window.markDead = (id) => {
-    set(ref(db, 'bosses/' + id), { deathTime: getJST().toISOString() });
+    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 };
 
 window.setManualTime = (id) => {
@@ -138,7 +154,7 @@ window.setManualTime = (id) => {
     
     // Si está oculto, lo mostramos y cargamos la hora de Japón actual
     if (input.style.display === "none") {
-        const nowJST = getJST();
+        const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
         const year = nowJST.getFullYear();
         const month = String(nowJST.getMonth() + 1).padStart(2, '0');
         const day = String(nowJST.getDate()).padStart(2, '0');
@@ -204,7 +220,7 @@ function renderBossList(filter = "") {
 
 function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
-    const now = getJST().getTime();
+    const now = getNow();
     
     const map = new Map();
     activeTimers.forEach(t => map.set(t.id, t));
