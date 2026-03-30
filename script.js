@@ -1,7 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// --- SEGURIDAD OFUSCADA ---
+// --- CONFIGURACIÓN FIREBASE ---
 const _k = ["AIzaSyB3oUOk", "KBUpLYdPVpt5", "i2LJdJ1lqEs3HIM"];
 const firebaseConfig = {
     apiKey: _k.join(""),
@@ -9,36 +9,39 @@ const firebaseConfig = {
     databaseURL: "https://lordnine-tracker-e3a97-default-rtdb.firebaseio.com",
     projectId: "lordnine-tracker-e3a97",
     storageBucket: "lordnine-tracker-e3a97.firebasestorage.app",
-    messagingSenderId: "923786523326",
     appId: "1:923786523326:web:45eb3278eef5851b2524ef"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- DATA ---
+// --- VARIABLES GLOBALES ---
+const HOUR_IN_MS = 60 * 60 * 1000;
+const DAY_IN_MS = 24 * HOUR_IN_MS;
+
+// LISTA COMPLETA RESCATADA (38 BOSSES)
 const BOSSES = [
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
     { id: 'viorent', name: 'Viorent', level: 65, interval: 10, location: 'Crecent Lake' }, 
     { id: 'ego', name: 'Ego', level: 70, interval: 21, location: 'Ulan Canyon' }, 
-    { id: 'clemantis', name: 'Clemantis', level: 70, interval: 24, fixedSchedule: true, location: 'Corrupted Basin' }, 
+    { id: 'clemantis', name: 'Clemantis', level: 70, interval: 24, fixedSchedule: [{ day: 1, hour: 12, minute: 30 }, { day: 4, hour: 20, minute: 0 }], location: 'Corrupted Basin' }, 
     { id: 'livera', name: 'Livera', level: 75, interval: 24, location: "Protector's Ruin" }, 
     { id: 'araneo', name: 'Araneo', level: 75, interval: 24, location: 'Lower Tomb of Tyriosa 1F' }, 
     { id: 'undomiel', name: 'Undomiel', level: 80, interval: 24, location: 'Secret Laboratory' }, 
-    { id: 'saphirus', name: 'Saphirus', level: 80, interval: 24, fixedSchedule: true, location: 'Crecent Lake' }, 
-    { id: 'neutro', name: 'Neutro', level: 80, interval: 24, fixedSchedule: true, location: 'Desert of the Screaming' }, 
+    { id: 'saphirus', name: 'Saphirus', level: 80, interval: 24, fixedSchedule: [{ day: 0, hour: 18, minute: 0 }, { day: 2, hour: 12, minute: 30 }], location: 'Crecent Lake' }, 
+    { id: 'neutro', name: 'Neutro', level: 80, interval: 24, fixedSchedule: [{ day: 2, hour: 20, minute: 0 }, { day: 4, hour: 12, minute: 30 }], location: 'Desert of the Screaming' }, 
     { id: 'ladydalia', name: 'Lady Dalia', level: 85, interval: 18, location: 'Twilight Hill' }, 
     { id: 'generalaquleus', name: 'General Aquleus', level: 85, interval: 29, location: 'Lower Tomb of Tyriosa 2F' }, 
-    { id: 'thymele', name: 'Thymele', level: 85, interval: 24, fixedSchedule: true, location: 'Twilight Hill' }, 
-    { id: 'ringor', name: 'Ringor', level: 85, interval: 24, fixedSchedule: true, location: 'Battlefield of Templar' }, 
+    { id: 'thymele', name: 'Thymele', level: 85, interval: 24, fixedSchedule: [{ day: 1, hour: 20, minute: 0 }, { day: 3, hour: 12, minute: 30 }], location: 'Twilight Hill' }, 
+    { id: 'ringor', name: 'Ringor', level: 85, interval: 24, fixedSchedule: [{ day: 6, hour: 18, minute: 0 }], location: 'Battlefield of Templar' }, 
     { id: 'amentis', name: 'Amentis', level: 88, interval: 29, location: 'Land of Glory' }, 
     { id: 'baronbraudmore', name: 'Baron Braudmore', level: 88, interval: 32, location: 'Battlefield of Templar' }, 
-    { id: 'milavy', name: 'Milavy', level: 90, interval: 24, fixedSchedule: true, location: 'Lower Tomb of Tyriosa 3F' }, 
+    { id: 'milavy', name: 'Milavy', level: 90, interval: 24, fixedSchedule: [{ day: 6, hour: 16, minute: 0 }], location: 'Lower Tomb of Tyriosa 3F' }, 
     { id: 'wannitas', name: 'Wannitas', level: 93, interval: 48, location: 'Plateau of Revolution' }, 
     { id: 'metus', name: 'Metus', level: 93, interval: 48, location: 'Plateau of Revolution' }, 
     { id: 'duplican', name: 'Duplican', level: 93, interval: 48, location: 'Plateau of Revolution' }, 
     { id: 'shuliar', name: 'Shuliar', level: 95, interval: 35, location: 'Ruins of the War' }, 
-    { id: 'roderick', name: 'Roderick', level: 95, interval: 24, fixedSchedule: true, location: 'Garbana Underground Waterway 1' }, 
+    { id: 'roderick', name: 'Roderick', level: 95, interval: 24, fixedSchedule: [{ day: 5, hour: 20, minute: 0 }], location: 'Garbana Underground Waterway 1' }, 
     { id: 'gareth', name: 'Gareth', level: 98, interval: 32, location: "Deadman's Land District 1" }, 
     { id: 'titore', name: 'Titore', level: 98, interval: 37, location: "Deadman's Land District 2" }, 
     { id: 'larba', name: 'Larba', level: 98, interval: 35, location: 'Ruins of the War' }, 
@@ -47,55 +50,90 @@ const BOSSES = [
     { id: 'ordo', name: 'Ordo', level: 100, interval: 62, location: 'Silvergrass Field' }, 
     { id: 'asta', name: 'Asta', level: 100, interval: 62, location: 'Silvergrass Field' }, 
     { id: 'supore', name: 'Supore', level: 100, interval: 62, location: 'Silvergrass Field' }, 
-    { id: 'auraq', name: 'Auraq', level: 100, interval: 24, fixedSchedule: true, location: 'Garbana Underground Waterway 2' }, 
-    { id: 'chaiflock', name: 'Chaiflock', level: 120, interval: 24, fixedSchedule: true, location: 'Silvergrass Field' }, 
-    { id: 'benji', name: 'Benji', level: 120, interval: 24, fixedSchedule: true, location: 'Barbas' },
-    { id: 'libitina', name: 'Libitina', level: 130, interval: 24, fixedSchedule: true, location: 'Volcano Dracas' },
-    { id: 'rakajeth', name: 'Rakajeth', level: 130, interval: 24, fixedSchedule: true, location: 'Volcano Dracas' },
-    { id: 'icaruthia', name: 'Icaruthia', level: 135, interval: 24, fixedSchedule: true, location: 'Kransia' },
-    { id: 'motti', name: 'Motti', level: 135, interval: 24, fixedSchedule: true, location: 'Kransia' },
-    { id: 'nevaeh', name: 'Nevaeh', level: 140, interval: 24, fixedSchedule: true, location: 'Kransia' },
-    { id: 'tumier', name: 'Tumier', level: 140, interval: 24, fixedSchedule: true, location: 'Kransia' },
+    { id: 'auraq', name: 'Auraq', level: 100, interval: 24, fixedSchedule: [{ day: 5, hour: 23, minute: 0 }, { day: 3, hour: 22, minute: 0 }], location: 'Garbana Underground Waterway 2' }, 
+    { id: 'chaiflock', name: 'Chaiflock', level: 120, interval: 24, fixedSchedule: [{ day: 6, hour: 23, minute: 0 }], location: 'Silvergrass Field' }, 
+    { id: 'benji', name: 'Benji', level: 120, interval: 24, fixedSchedule: [{ day: 0, hour: 22, minute: 0 }], location: 'Barbas' },
+    { id: 'libitina', name: 'Libitina', level: 130, interval: 24, fixedSchedule: [{ day: 1, hour: 22, minute: 0 }, { day: 6, hour: 22, minute: 0 }], location: 'Volcano Dracas' },
+    { id: 'rakajeth', name: 'Rakajeth', level: 130, interval: 24, fixedSchedule: [{ day: 2, hour: 23, minute: 0 }, { day: 0, hour: 20, minute: 0 }], location: 'Volcano Dracas' },
+    { id: 'icaruthia', name: 'Icaruthia', level: 135, interval: 24, fixedSchedule: [{ day: 2, hour: 22, minute: 0 }, { day: 5, hour: 22, minute: 0 }], location: 'Kransia' },
+    { id: 'motti', name: 'Motti', level: 135, interval: 24, fixedSchedule: [{ day: 3, hour: 20, minute: 0 }, { day: 6, hour: 20, minute: 0 }], location: 'Kransia' },
+    { id: 'nevaeh', name: 'Nevaeh', level: 140, interval: 24, fixedSchedule: [{ day: 0, hour: 23, minute: 0 }], location: 'Kransia' },
+    { id: 'tumier', name: 'Tumier', level: 140, interval: 24, fixedSchedule: [{ day: 0, hour: 20, minute: 0 }], location: 'Kransia' },
 ];
 
-let userRole = null;
 let activeTimers = [];
 
-// --- HELPER JST (UTC+9) ---
+// --- FUNCIONES DE TIEMPO (JST UTC+9) ---
 function getJST() {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
 }
 
-// --- LOGICA ---
-window.askAdminPassword = () => {
-    const pass = prompt("Enter Admin Password:");
-    if (pass === "1234") window.setRole('admin');
-    else if (pass !== null) alert("Wrong Password");
-};
+function calculateNextFixedTarget(boss) {
+    const nowJST = getJST();
+    const WEEK_IN_MS = 7 * DAY_IN_MS; 
+    const currentTimeOfWeekMs = (nowJST.getDay() * DAY_IN_MS) + (nowJST.getHours() * HOUR_IN_MS) + (nowJST.getMinutes() * 60000);
 
-window.setRole = (role) => {
-    userRole = role;
-    document.getElementById('role-selection-overlay').style.display = 'none';
-    document.getElementById('role-status').textContent = "Mode: " + role.toUpperCase();
-    renderBossList();
-};
+    let nextTarget = Infinity;
+    boss.fixedSchedule.forEach(sch => {
+        const targetMs = (sch.day * DAY_IN_MS) + (sch.hour * HOUR_IN_MS) + (sch.minute * 60000);
+        let diff = targetMs - currentTimeOfWeekMs;
+        if (diff <= 0) diff += WEEK_IN_MS;
+        if (nowJST.getTime() + diff < nextTarget) nextTarget = nowJST.getTime() + diff;
+    });
+    return nextTarget;
+}
 
-window.markDead = (id, name, interval) => {
-    const targetTime = getJST().getTime() + (interval * 60 * 60 * 1000);
-    set(ref(db, 'bosses/' + id), { name, targetTime });
-};
-
-window.clearTimer = (id) => {
-    if(confirm("Remove this timer?")) remove(ref(db, 'bosses/' + id));
-};
-
+// --- FIREBASE LOGIC ---
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
-    activeTimers = data ? Object.keys(data).map(k => ({ id: k, ...data[k] })) : [];
-    document.getElementById('loading-screen').style.display = 'none';
+    activeTimers = [];
+
+    // Bosses Fijos
+    BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
+        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
+    });
+
+    // Bosses por Intervalo
+    if (data) {
+        for (let id in data) {
+            const boss = BOSSES.find(b => b.id === id);
+            if (boss && data[id].deathTime) {
+                const deathTime = new Date(data[id].deathTime).getTime();
+                let target = deathTime + (boss.interval * HOUR_IN_MS);
+                const now = getJST().getTime();
+                while (target < now) { target += (boss.interval * HOUR_IN_MS); }
+                activeTimers.push({ id: boss.id, name: boss.name, targetTime: target, isFixed: false });
+            }
+        }
+    }
     renderActivePanel();
 });
 
+// MARCAR MUERTE (Botón Principal)
+window.markDead = (id) => {
+    set(ref(db, 'bosses/' + id), { deathTime: getJST().toISOString() });
+};
+
+// SET MANUAL (Botón Auxiliar)
+window.setManualTime = (id) => {
+    const input = document.getElementById(`time-input-${id}`);
+    if (input.style.display === "none") {
+        input.style.display = "block";
+    } else {
+        if (input.value) {
+            set(ref(db, 'bosses/' + id), { deathTime: new Date(input.value).toISOString() });
+            input.style.display = "none";
+        } else {
+            alert("Selecciona una fecha/hora primero");
+        }
+    }
+};
+
+window.clearTimer = (id) => {
+    if(confirm("¿Eliminar timer?")) remove(ref(db, 'bosses/' + id));
+};
+
+// --- RENDERIZADO ---
 function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
     container.innerHTML = BOSSES
@@ -106,12 +144,16 @@ function renderBossList(filter = "") {
                 <div class="boss-info">
                     <h2 class="boss-name-gradient">${b.name.toUpperCase()}</h2>
                     <div class="subtitle-group">
-                        <span class="boss-level">LVL ${b.level}</span> - <span class="location-text">${b.location}</span>
+                        <span class="boss-level">LVL ${b.level}</span> | <span class="location-text">${b.location}</span>
                     </div>
-                    <p style="font-size:0.8em; margin:5px 0;">${b.fixedSchedule ? 'FIXED SCHEDULE' : `INTERVAL: ${b.interval}H`}</p>
+                    <p style="font-size:0.7em; margin-top:5px;">${b.fixedSchedule ? '📅 FIXED' : `⏱️ RE-SPAWN: ${b.interval}H`}</p>
+                    <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:5px;">
                 </div>
-                <div class="action-column" style="margin-left:auto;">
-                    ${!b.fixedSchedule ? `<button class="mark-dead-btn" onclick="window.markDead('${b.id}', '${b.name}', ${b.interval})">DEAD</button>` : ''}
+                <div class="action-column">
+                    ${!b.fixedSchedule ? `
+                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">DEAD</button>
+                        <button class="set-btn" onclick="window.setManualTime('${b.id}')" style="font-size:10px; padding:2px; margin-top:2px;">SET</button>
+                    ` : '<span class="fixed-badge">AUTO</span>'}
                 </div>
             </div>
         `).join('');
@@ -120,20 +162,23 @@ function renderBossList(filter = "") {
 function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = getJST().getTime();
-    activeTimers.sort((a, b) => a.targetTime - b.targetTime);
+    
+    // Filtro de duplicados y orden
+    const map = new Map();
+    activeTimers.forEach(t => map.set(t.id, t));
+    const sorted = Array.from(map.values()).sort((a, b) => a.targetTime - b.targetTime);
 
-    panel.innerHTML = activeTimers.map(t => {
+    panel.innerHTML = sorted.map(t => {
         const diff = t.targetTime - now;
-        const imminent = diff > 0 && diff < 300000;
         return `
-            <div class="active-timer-card ${imminent ? 'boss-imminent' : ''}">
+            <div class="active-timer-card ${diff < 300000 && diff > 0 ? 'boss-imminent' : ''}">
                 <div>
                     <h3>${t.name}</h3>
-                    <p>JST: ${new Date(t.targetTime).toLocaleTimeString('en-US', {hour12:false, timeZone:'Asia/Tokyo'})}</p>
+                    <p>Next: ${new Date(t.targetTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</p>
                 </div>
                 <div style="text-align:right">
-                    <span class="countdown-value">${diff < 0 ? 'ALIVE' : formatTime(diff)}</span>
-                    <br>${userRole === 'admin' ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">CLEAR</button>` : ''}
+                    <span class="countdown-value" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">${diff < 0 ? 'ALIVE' : formatTime(diff)}</span>
+                    ${!t.isFixed ? `<br><button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
                 </div>
             </div>
         `;
@@ -147,9 +192,14 @@ function formatTime(ms) {
     return `${h}h ${m}m ${s}s`;
 }
 
-document.getElementById('search-boss').addEventListener('input', (e) => renderBossList(e.target.value.toLowerCase()));
+// Inicialización
+document.addEventListener('DOMContentLoaded', () => {
+    renderBossList();
+    setInterval(() => {
+        const clock = document.getElementById('jst-time-display');
+        if(clock) clock.textContent = "Server Time (JST): " + getJST().toLocaleTimeString('en-US', {hour12:false});
+        renderActivePanel();
+    }, 1000);
+});
 
-setInterval(() => {
-    document.getElementById('jst-time-display').textContent = "Server Time (JST): " + getJST().toLocaleTimeString('en-US', {hour12:false});
-    renderActivePanel();
-}, 1000);
+document.getElementById('search-boss').addEventListener('input', (e) => renderBossList(e.target.value.toLowerCase()));
