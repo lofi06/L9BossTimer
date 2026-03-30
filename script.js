@@ -61,7 +61,7 @@ const BOSSES = [
 ];
 
 let activeTimers = [];
-let userRole = localStorage.getItem('lordnine_role') || null;
+let userRole = null; // No guardamos en localStorage para forzar login en F5
 
 // --- ACCESO Y SEGURIDAD ---
 window.askAdminPassword = () => {
@@ -75,25 +75,22 @@ window.askAdminPassword = () => {
 
 window.setRole = (role) => {
     userRole = role;
-    localStorage.setItem('lordnine_role', role);
-    const overlay = document.getElementById('role-selection-overlay');
-    if (overlay) overlay.style.display = 'none';
+    document.getElementById('role-selection-overlay').style.display = 'none';
     document.getElementById('role-status').textContent = "Mode: " + role.toUpperCase();
     updateActivePanel();
-};
-
-window.logout = () => {
-    localStorage.removeItem('lordnine_role');
-    location.reload();
 };
 
 // --- SINCRONIZACIÓN FIREBASE ---
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val() || {};
     activeTimers = [];
+    
+    // Bosses con horario fijo
     BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
         activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
     });
+
+    // Bosses marcados manualmente
     for (let id in data) {
         const boss = BOSSES.find(b => b.id === id);
         if (boss && data[id].deathTime) {
@@ -104,9 +101,10 @@ onValue(ref(db, 'bosses'), (snapshot) => {
     updateActivePanel();
 });
 
-// --- ACCIONES DE BOTONES ---
+// --- ACCIONES ---
 window.handleMarkDead = (id) => set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 window.clearTimer = (id) => remove(ref(db, 'bosses/' + id));
+
 window.openSetModal = (id) => {
     const input = document.getElementById(`time-input-${id}`);
     const btn = document.querySelector(`#tracker-${id} .set-btn`);
@@ -120,7 +118,7 @@ window.openSetModal = (id) => {
     }
 };
 
-// --- LÓGICA DE INTERFAZ ---
+// --- INTERFAZ ---
 function updateActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = Date.now();
@@ -139,7 +137,7 @@ function updateActivePanel() {
                 </div>
                 <div class="timer-countdown">
                     <span class="countdown-value" style="color: #4caf50; font-weight: bold; font-family: monospace; font-size: 1.2em;">${countdown}</span>
-                    ${(userRole === 'admin' && !t.isFixed) ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">CLEAR</button>` : ''}
+                    ${(userRole === 'admin' && !t.isFixed) ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')" style="background:#8e44ad; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer; margin-top:5px; font-size:0.8em;">CLEAR</button>` : ''}
                 </div>
             </div>`;
     }).join('');
@@ -148,9 +146,10 @@ function updateActivePanel() {
 function generateBossUI() {
     const container = document.getElementById('bosses-container');
     container.innerHTML = [...BOSSES].sort((a, b) => a.level - b.level).map(boss => {
-        const scheduleHTML = boss.fixedSchedule 
-            ? `<div class="fixed-schedule-list">${boss.fixedSchedule.map(s => `<div>${s.str}</div>`).join('')}</div>`
-            : `<div class="respawn-text">RESPAWN EVERY: ${boss.interval}H</div>`;
+        // Estilo original para Respawn Every y Fixed Schedule
+        const infoHTML = boss.fixedSchedule 
+            ? `<div class="fixed-schedule-list" style="color:#ffcc00; font-size:0.85em; margin-top:5px;">${boss.fixedSchedule.map(s => `<div>${s.str}</div>`).join('')}</div>`
+            : `<div class="respawn-text" style="color:#888; font-size:0.85em; margin-top:5px;">RESPAWN EVERY: ${boss.interval}H</div>`;
 
         return `
         <div class="boss-tracker" id="tracker-${boss.id}">
@@ -158,32 +157,28 @@ function generateBossUI() {
             <div class="boss-info">
                 <h2>${boss.name}</h2>
                 <div class="subtitle-group">
-                    <span class="boss-level">LVL ${boss.level}</span>
-                    <span class="location-text">${boss.location}</span>
+                    <span class="boss-level" style="color:#ffcc00;">LVL ${boss.level}</span>
+                    <span class="location-text" style="color:#4caf50; margin-left:10px;">${boss.location}</span>
                 </div>
-                ${scheduleHTML}
-                <input type="datetime-local" id="time-input-${boss.id}" class="manual-time-input" style="display:none;">
+                ${infoHTML}
+                <input type="datetime-local" id="time-input-${boss.id}" class="manual-time-input" style="display:none; margin-top:10px;">
             </div>
             <div class="action-column">
                 ${!boss.fixedSchedule ? `
                     <div class="button-group">
-                        <button class="mark-dead-btn" onclick="window.handleMarkDead('${boss.id}')">Mark Dead</button>
-                        <button class="set-btn" onclick="window.openSetModal('${boss.id}')">Set</button>
-                    </div>` : '<span class="fixed-badge">BASE SCHEDULE (UTC+8)</span>'}
+                        <button class="mark-dead-btn" onclick="window.handleMarkDead('${boss.id}')">MARK DEAD</button>
+                        <button class="set-btn" onclick="window.openSetModal('${boss.id}')">SET</button>
+                    </div>` : '<span class="fixed-badge" style="font-size:0.7em; color:#666;">BASE SCHEDULE (UTC+8)</span>'}
             </div>
         </div>`;
     }).join('');
 }
 
-// --- AUXILIARES ---
+// Auxiliares
 function formatTime(ms) {
     const h = Math.floor(ms / HOUR_IN_MS);
     const m = Math.floor((ms % HOUR_IN_MS) / 60000);
     const s = Math.floor((ms % 60000) / 1000);
-    if (h >= 24) {
-        const d = Math.floor(h / 24);
-        return `${d}d ${h % 24}h ${m}m ${s}s`;
-    }
     return `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
 }
 
@@ -207,18 +202,13 @@ function calculateNextFixedTarget(boss) {
     return nextTarget;
 }
 
-window.filterBosses = () => {
-    const val = document.getElementById('search-boss').value.toLowerCase();
-    document.querySelectorAll('.boss-tracker').forEach(c => c.style.display = c.innerText.toLowerCase().includes(val) ? 'flex' : 'none');
-};
-document.getElementById('search-boss').addEventListener('keyup', window.filterBosses);
-
 document.addEventListener('DOMContentLoaded', () => {
-    if (!userRole) {
-        document.getElementById('role-selection-overlay').style.display = 'flex';
-    } else {
-        window.setRole(userRole);
-    }
+    // Buscador
+    document.getElementById('search-boss').addEventListener('keyup', () => {
+        const val = document.getElementById('search-boss').value.toLowerCase();
+        document.querySelectorAll('.boss-tracker').forEach(c => c.style.display = c.innerText.toLowerCase().includes(val) ? 'flex' : 'none');
+    });
+
     generateBossUI();
     setInterval(() => {
         document.getElementById('local-time-display').textContent = "Local Time: " + new Date().toLocaleTimeString();
