@@ -182,15 +182,15 @@ function renderBossList(filter = "") {
                         <span class="boss-level">LVL ${b.level}</span> | <span class="location-text">${b.location}</span>
                     </div>
                     ${b.fixedSchedule ? 
-                        `<span class="fixed-schedule-list" style="color: #d4af37;">📅 ${scheduleText}</span>` : 
-                        `<span class="interval-text">⏳ Re-Spawn Every ${b.interval}H</span>`
+                        `<span class="fixed-schedule-list" style="color: #d4af37;">${scheduleText}</span>` : 
+                        `<span class="interval-text">Re-Spawn Every ${b.interval}H</span>`
                     }
                     <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:5px;">
                 </div>
                 <div class="action-column">
                     ${!b.fixedSchedule ? `
-                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">DEAD</button>
-                        <button class="set-btn" onclick="window.setManualTime('${b.id}')">SET</button>
+                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">💀</button>
+                        <button class="set-btn" onclick="window.setManualTime('${b.id}')">⏰</button>
                     ` : '<span class="fixed-badge" style="font-weight:bold; color:#d4af37; font-size:0.8em;">AUTO</span>'}
                 </div>
             </div>
