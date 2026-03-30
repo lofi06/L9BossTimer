@@ -1,8 +1,8 @@
 /* =======================================================
-   GENERAL & LAYOUT
+   GENERAL & FONTS
    ======================================================= */
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Cinzel', serif; /* Aplicado a todo el documento */
     background-color: #0d1117;
     color: #c9d1d9;
     margin: 0;
@@ -12,7 +12,7 @@ body {
 
 header {
     background-color: #161b22;
-    padding: 25px 40px; /* Más aire para que no pegue arriba */
+    padding: 25px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -20,45 +20,39 @@ header {
 }
 
 .logo-text h1 {
-    font-family: 'Cinzel', serif;
     color: #d4af37;
-    font-size: 1.5em;
+    font-size: 1.6em;
     margin: 0 0 5px 0;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    font-weight: 700;
 }
 
 .server-time {
     color: #8b949e;
-    font-family: 'Roboto Mono', monospace;
+    font-family: 'Roboto Mono', monospace; /* El reloj se queda en Mono para que no salte */
     font-size: 0.9em;
-    margin: 0;
 }
 
 #search-boss {
+    font-family: 'Cinzel', serif;
     background: #0d1117;
     border: 1px solid #30363d;
     color: white;
     padding: 10px 15px;
     border-radius: 6px;
     width: 250px;
-    transition: 0.3s;
-}
-
-#search-boss:focus { border-color: #d4af37; outline: none; }
-
-.main-layout {
-    display: flex;
-    height: calc(100vh - 100px);
+    outline: none;
 }
 
 /* =======================================================
    COLUMNS & SCROLL
    ======================================================= */
+.main-layout { display: flex; height: calc(100vh - 100px); }
 .boss-list-container { flex: 3; border-right: 1px solid #30363d; display: flex; flex-direction: column; }
 .active-timers-container { flex: 1; min-width: 350px; display: flex; flex-direction: column; background: #0d1117; }
 
 .section-header { padding: 15px; border-bottom: 1px solid #30363d; background: #161b22; }
-.section-header h2 { font-family: 'Cinzel', serif; color: #d4af37; margin: 0; font-size: 1.1em; text-align: center; }
+.section-header h2 { color: #d4af37; margin: 0; font-size: 1.2em; text-align: center; letter-spacing: 1px; }
 
 #bosses-container, #active-timers-display { overflow-y: auto; flex-grow: 1; padding: 15px; }
 
@@ -70,63 +64,55 @@ header {
     align-items: center;
     padding: 15px;
     border-bottom: 1px solid #21262d;
-    transition: 0.2s;
 }
-.boss-tracker:hover { background: #161b22; }
 
 .boss-image { width: 55px; height: 55px; border: 1px solid #d4af37; border-radius: 4px; margin-right: 15px; }
 
-.boss-info h3 { font-family: 'Cinzel', serif; color: #e5d8b6; margin: 0; font-size: 1.2em; }
-.subtitle-group { font-size: 0.85em; margin: 4px 0; }
-.boss-level { color: #d4af37; font-weight: bold; border-right: 1px solid #333; padding-right: 8px; margin-right: 8px; }
+.boss-info h2 { color: #e5d8b6; margin: 0; font-size: 1.3em; letter-spacing: 1px; }
+.subtitle-group { font-size: 0.9em; margin: 5px 0; color: #8b949e; }
+.boss-level { color: #d4af37; font-weight: bold; }
 .location-text { color: #4CAF50; }
 
-.fixed-schedule-list { font-size: 0.8em; color: #d4af37; margin-top: 4px; display: block; font-weight: bold; }
+.fixed-schedule-list { font-size: 0.8em; color: #d4af37; margin-top: 5px; font-weight: bold; display: block; }
 .interval-text { font-size: 0.8em; color: #8b949e; }
 
-.action-column { margin-left: auto; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-
-/* Inputs y Botones */
-input[type="datetime-local"] {
-    background: #161b22; color: #d4af37; border: 1px solid #30363d;
-    padding: 4px; border-radius: 4px; font-family: 'Roboto Mono'; font-size: 0.8em;
+/* Botones */
+.mark-dead-btn { 
+    font-family: 'Cinzel', serif; 
+    background: #375a3c; color: white; border: none; 
+    padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: 700;
 }
-
-.mark-dead-btn { background: #375a3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-family: 'Cinzel'; }
-.set-btn { background: #805d93; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: 'Cinzel'; font-size: 0.8em; }
+.set-btn { 
+    font-family: 'Cinzel', serif; 
+    background: #805d93; color: white; border: none; 
+    padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;
+}
 
 /* =======================================================
    ACTIVE TIMERS PANEL
    ======================================================= */
 .active-timer-card {
     background: #161b22; margin-bottom: 12px; padding: 15px; border-radius: 8px;
-    display: flex; justify-content: space-between; align-items: center;
-    border-left: 4px solid #30363d;
+    border-left: 4px solid #30363d; display: flex; justify-content: space-between; align-items: center;
 }
 
-.active-timer-card.imminent { border-left-color: #ff7b72; animation: pulse 2s infinite; }
-@keyframes pulse { 50% { box-shadow: 0 0 10px rgba(255, 123, 114, 0.2); } }
+.active-timer-card h3 { margin: 0; font-size: 1.1em; color: #e5d8b6; letter-spacing: 1px; }
+.active-timer-card p { font-size: 0.8em; color: #8b949e; margin: 3px 0; }
 
-.timer-info h4 { font-family: 'Cinzel', serif; color: #e5d8b6; margin: 0; font-size: 1em; }
-.timer-info p { font-size: 0.75em; color: #8b949e; margin: 2px 0; }
-
-.timer-values { text-align: right; }
-.countdown-value { font-family: 'Roboto Mono', monospace; font-size: 1.25em; color: #4CAF50; font-weight: bold; display: block; }
-.countdown-value.urgent { color: #ff7b72; }
+.countdown-value {
+    font-family: 'Cinzel', serif; /* Aquí también usamos Cinzel para el tiempo */
+    font-size: 1.3em;
+    font-weight: bold;
+}
 
 .clear-btn {
     background: #21262d; border: 1px solid #d4af37; color: #d4af37;
-    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
-    font-weight: bold; margin-top: 8px; transition: 0.2s;
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-weight: bold;
 }
-.clear-btn:hover { background: #d4af37; color: #0d1117; }
 
-/* =======================================================
-   FOOTER STRANGERZ
-   ======================================================= */
+/* Guild Tag Footer */
 .footer-actions { padding: 20px; border-top: 1px solid #30363d; display: flex; justify-content: center; }
 .guild-tag {
-    font-family: 'Cinzel', serif; font-size: 1.1em; color: #d4af37;
-    border: 1px solid #d4af37; padding: 6px 25px; background: rgba(212, 175, 55, 0.05);
-    letter-spacing: 2px;
+    font-size: 1.2em; color: #d4af37; border: 1px solid #d4af37;
+    padding: 8px 30px; background: rgba(212, 175, 55, 0.05); letter-spacing: 3px;
 }
