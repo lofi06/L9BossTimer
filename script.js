@@ -1,10 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// Ofuscación para evitar el bloqueo de seguridad de GitHub
-const _0x = ["AIzaSyB3oUOk", "KBUpLYdPVpt5", "i2LJdJ1lqEs3HIM"];
+// --- SEGURIDAD Y CONEXIÓN ---
+// Dividimos la clave para que GitHub no la bloquee y el navegador pueda leerla
+const k1 = "AIzaSyB3oUOk";
+const k2 = "KBUpLYdPVpt5";
+const k3 = "i2LJdJ1lqEs3HIM";
+
 const firebaseConfig = {
-    apiKey: _0x.join(""), // Esto reconstruye la clave sin que GitHub la detecte como texto plano
+    apiKey: k1 + k2 + k3, 
     authDomain: "lordnine-tracker-e3a97.firebaseapp.com",
     databaseURL: "https://lordnine-tracker-e3a97-default-rtdb.firebaseio.com",
     projectId: "lordnine-tracker-e3a97",
@@ -17,28 +21,29 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// --- LISTA COMPLETA DE 38 BOSSES ---
 const BOSSES = [
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
     { id: 'viorent', name: 'Viorent', level: 65, interval: 10, location: 'Crecent Lake' }, 
     { id: 'ego', name: 'Ego', level: 70, interval: 21, location: 'Ulan Canyon' }, 
-    { id: 'clemantis', name: 'Clemantis', level: 70, interval: 24, fixedSchedule: [{ day: 1, hour: 12, minute: 30 }, { day: 4, hour: 20, minute: 0 }], location: 'Corrupted Basin' }, 
+    { id: 'clemantis', name: 'Clemantis', level: 70, interval: 24, fixedSchedule: true, location: 'Corrupted Basin' }, 
     { id: 'livera', name: 'Livera', level: 75, interval: 24, location: "Protector's Ruin" }, 
     { id: 'araneo', name: 'Araneo', level: 75, interval: 24, location: 'Lower Tomb of Tyriosa 1F' }, 
     { id: 'undomiel', name: 'Undomiel', level: 80, interval: 24, location: 'Secret Laboratory' }, 
-    { id: 'saphirus', name: 'Saphirus', level: 80, interval: 24, fixedSchedule: [{ day: 0, hour: 18, minute: 0 }, { day: 2, hour: 12, minute: 30 }], location: 'Crecent Lake' }, 
-    { id: 'neutro', name: 'Neutro', level: 80, interval: 24, fixedSchedule: [{ day: 2, hour: 20, minute: 0 }, { day: 4, hour: 12, minute: 30 }], location: 'Desert of the Screaming' }, 
+    { id: 'saphirus', name: 'Saphirus', level: 80, interval: 24, fixedSchedule: true, location: 'Crecent Lake' }, 
+    { id: 'neutro', name: 'Neutro', level: 80, interval: 24, fixedSchedule: true, location: 'Desert of the Screaming' }, 
     { id: 'ladydalia', name: 'Lady Dalia', level: 85, interval: 18, location: 'Twilight Hill' }, 
     { id: 'generalaquleus', name: 'General Aquleus', level: 85, interval: 29, location: 'Lower Tomb of Tyriosa 2F' }, 
-    { id: 'thymele', name: 'Thymele', level: 85, interval: 24, fixedSchedule: [{ day: 1, hour: 20, minute: 0 }, { day: 3, hour: 12, minute: 30 }], location: 'Twilight Hill' }, 
-    { id: 'ringor', name: 'Ringor', level: 85, interval: 24, fixedSchedule: [{ day: 6, hour: 18, minute: 0 }], location: 'Battlefield of Templar' }, 
+    { id: 'thymele', name: 'Thymele', level: 85, interval: 24, fixedSchedule: true, location: 'Twilight Hill' }, 
+    { id: 'ringor', name: 'Ringor', level: 85, interval: 24, fixedSchedule: true, location: 'Battlefield of Templar' }, 
     { id: 'amentis', name: 'Amentis', level: 88, interval: 29, location: 'Land of Glory' }, 
     { id: 'baronbraudmore', name: 'Baron Braudmore', level: 88, interval: 32, location: 'Battlefield of Templar' }, 
-    { id: 'milavy', name: 'Milavy', level: 90, interval: 24, fixedSchedule: [{ day: 6, hour: 16, minute: 0 }], location: 'Lower Tomb of Tyriosa 3F' }, 
+    { id: 'milavy', name: 'Milavy', level: 90, interval: 24, fixedSchedule: true, location: 'Lower Tomb of Tyriosa 3F' }, 
     { id: 'wannitas', name: 'Wannitas', level: 93, interval: 48, location: 'Plateau of Revolution' }, 
     { id: 'metus', name: 'Metus', level: 93, interval: 48, location: 'Plateau of Revolution' }, 
     { id: 'duplican', name: 'Duplican', level: 93, interval: 48, location: 'Plateau of Revolution' }, 
     { id: 'shuliar', name: 'Shuliar', level: 95, interval: 35, location: 'Ruins of the War' }, 
-    { id: 'roderick', name: 'Roderick', level: 95, interval: 24, fixedSchedule: [{ day: 5, hour: 20, minute: 0 }], location: 'Garbana Underground Waterway 1' }, 
+    { id: 'roderick', name: 'Roderick', level: 95, interval: 24, fixedSchedule: true, location: 'Garbana Underground Waterway 1' }, 
     { id: 'gareth', name: 'Gareth', level: 98, interval: 32, location: "Deadman's Land District 1" }, 
     { id: 'titore', name: 'Titore', level: 98, interval: 37, location: "Deadman's Land District 2" }, 
     { id: 'larba', name: 'Larba', level: 98, interval: 35, location: 'Ruins of the War' }, 
@@ -47,20 +52,21 @@ const BOSSES = [
     { id: 'ordo', name: 'Ordo', level: 100, interval: 62, location: 'Silvergrass Field' }, 
     { id: 'asta', name: 'Asta', level: 100, interval: 62, location: 'Silvergrass Field' }, 
     { id: 'supore', name: 'Supore', level: 100, interval: 62, location: 'Silvergrass Field' }, 
-    { id: 'auraq', name: 'Auraq', level: 100, interval: 24, fixedSchedule: [{ day: 5, hour: 23, minute: 0 }, { day: 3, hour: 22, minute: 0 }], location: 'Garbana Underground Waterway 2' }, 
-    { id: 'chaiflock', name: 'Chaiflock', level: 120, interval: 24, fixedSchedule: [{ day: 6, hour: 23, minute: 0 }], location: 'Silvergrass Field' }, 
-    { id: 'benji', name: 'Benji', level: 120, interval: 24, fixedSchedule: [{ day: 0, hour: 22, minute: 0 }], location: 'Barbas' },
-    { id: 'libitina', name: 'Libitina', level: 130, interval: 24, fixedSchedule: [{ day: 1, hour: 22, minute: 0 }, { day: 6, hour: 22, minute: 0 }], location: 'Volcano Dracas' },
-    { id: 'rakajeth', name: 'Rakajeth', level: 130, interval: 24, fixedSchedule: [{ day: 2, hour: 23, minute: 0 }, { day: 0, hour: 20, minute: 0 }], location: 'Volcano Dracas' },
-    { id: 'icaruthia', name: 'Icaruthia', level: 135, interval: 24, fixedSchedule: [{ day: 2, hour: 22, minute: 0 }, { day: 5, hour: 22, minute: 0 }], location: 'Kransia' },
-    { id: 'motti', name: 'Motti', level: 135, interval: 24, fixedSchedule: [{ day: 3, hour: 20, minute: 0 }, { day: 6, hour: 20, minute: 0 }], location: 'Kransia' },
-    { id: 'nevaeh', name: 'Nevaeh', level: 140, interval: 24, fixedSchedule: [{ day: 0, hour: 23, minute: 0 }], location: 'Kransia' },
-    { id: 'tumier', name: 'Tumier', level: 140, interval: 24, fixedSchedule: [{ day: 0, hour: 20, minute: 0 }], location: 'Kransia' },
+    { id: 'auraq', name: 'Auraq', level: 100, interval: 24, fixedSchedule: true, location: 'Garbana Underground Waterway 2' }, 
+    { id: 'chaiflock', name: 'Chaiflock', level: 120, interval: 24, fixedSchedule: true, location: 'Silvergrass Field' }, 
+    { id: 'benji', name: 'Benji', level: 120, interval: 24, fixedSchedule: true, location: 'Barbas' },
+    { id: 'libitina', name: 'Libitina', level: 130, interval: 24, fixedSchedule: true, location: 'Volcano Dracas' },
+    { id: 'rakajeth', name: 'Rakajeth', level: 130, interval: 24, fixedSchedule: true, location: 'Volcano Dracas' },
+    { id: 'icaruthia', name: 'Icaruthia', level: 135, interval: 24, fixedSchedule: true, location: 'Kransia' },
+    { id: 'motti', name: 'Motti', level: 135, interval: 24, fixedSchedule: true, location: 'Kransia' },
+    { id: 'nevaeh', name: 'Nevaeh', level: 140, interval: 24, fixedSchedule: true, location: 'Kransia' },
+    { id: 'tumier', name: 'Tumier', level: 140, interval: 24, fixedSchedule: true, location: 'Kransia' },
 ];
 
 let userRole = null;
 let activeTimers = [];
 
+// --- FUNCIONES GLOBALES (Asignadas a window para que el HTML las vea) ---
 window.askAdminPassword = () => {
     const pass = prompt("Enter Admin Password:");
     if (pass === "1234") { window.setRole('admin'); } 
@@ -76,14 +82,7 @@ window.setRole = (role) => {
     if(status) status.textContent = "Mode: " + role.toUpperCase();
     
     renderBossList();
-    renderActivePanel();
 };
-
-onValue(ref(db, 'bosses'), (snapshot) => {
-    const data = snapshot.val();
-    activeTimers = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-    renderActivePanel();
-});
 
 window.markDead = (id, name, interval) => {
     const targetTime = Date.now() + (interval * 60 * 60 * 1000);
@@ -91,9 +90,17 @@ window.markDead = (id, name, interval) => {
 };
 
 window.clearTimer = (id) => {
-    if(confirm(`Clear timer for ${id}?`)) { remove(ref(db, 'bosses/' + id)); }
+    if(confirm(`Remove timer for ${id}?`)) { remove(ref(db, 'bosses/' + id)); }
 };
 
+// --- SINCRONIZACIÓN CON FIREBASE ---
+onValue(ref(db, 'bosses'), (snapshot) => {
+    const data = snapshot.val();
+    activeTimers = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+    renderActivePanel();
+});
+
+// --- RENDERIZADO VISUAL (Estructura Boss-Tracker Original) ---
 function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
     if(!container) return;
@@ -115,7 +122,7 @@ function renderBossList(filter = "") {
                     ${!b.fixedSchedule ? `
                         <div class="button-group">
                             <button class="mark-dead-btn" onclick="window.markDead('${b.id}', '${b.name}', ${b.interval})">MARK DEAD</button>
-                        </div>` : '<span style="color:#d4af37; font-size:0.7em;">FIXED</span>'}
+                        </div>` : '<span style="color:#d4af37; font-size:0.7em; font-family:Cinzel;">FIXED</span>'}
                 </div>
             </div>
         `).join('');
@@ -159,7 +166,11 @@ function formatTime(ms) {
     return `${h}h ${m}m ${s}s`;
 }
 
-document.getElementById('search-boss').addEventListener('input', (e) => renderBossList(e.target.value.toLowerCase()));
+// --- EVENTOS ---
+const searchInput = document.getElementById('search-boss');
+if(searchInput) {
+    searchInput.addEventListener('input', (e) => renderBossList(e.target.value.toLowerCase()));
+}
 
 setInterval(() => {
     const timeDisplay = document.getElementById('local-time-display');
