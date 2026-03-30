@@ -188,7 +188,14 @@ window.setManualTime = (id) => {
     } else {
         // Si ya es visible y tiene valor, guardamos
         if (input.value) {
-            set(ref(db, 'bosses/' + id), { deathTime: new Date(input.value).toISOString() });
+            const [datePart, timePart] = input.value.split("T");
+            const [year, month, day] = datePart.split("-").map(Number);
+            const [hour, minute] = timePart.split(":").map(Number);
+            
+            // Crear fecha como JST y convertir a UTC correctamente
+            const utcDate = new Date(Date.UTC(year, month - 1, day, hour - 9, minute));
+            
+            set(ref(db, 'bosses/' + id), { deathTime: utcDate.toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
