@@ -189,8 +189,8 @@ function renderBossList(filter = "") {
                 </div>
                 <div class="action-column">
                     ${!b.fixedSchedule ? `
-                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">💀</button>
-                        <button class="set-btn" onclick="window.setManualTime('${b.id}')">⏰</button>
+                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">DEAD</button>
+                        <button class="set-btn" onclick="window.setManualTime('${b.id}')">SET</button>
                     ` : '<span class="fixed-badge" style="font-weight:bold; color:#d4af37; font-size:0.8em;">AUTO</span>'}
                 </div>
             </div>
