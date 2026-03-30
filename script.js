@@ -61,43 +61,31 @@ const BOSSES = [
 ];
 
 let activeTimers = [];
-let userRole = 'user'; // Por defecto
+let userRole = localStorage.getItem('lordnine_role') || null;
 
-// --- LÓGICA DE ROLES ---
+// --- EXPORTAR FUNCIONES AL OBJETO GLOBAL WINDOW ---
 window.askAdminPassword = () => {
     const pass = prompt("Enter Admin Password:");
-    if (pass === "1234") { // Cambia "1234" por la clave que quieras
-        setRole('admin');
-    } else {
+    if (pass === "1234") { 
+        window.setRole('admin');
+    } else if (pass !== null) {
         alert("Incorrect password.");
     }
 };
 
 window.setRole = (role) => {
     userRole = role;
+    localStorage.setItem('lordnine_role', role);
     document.getElementById('role-selection-overlay').style.display = 'none';
-    document.getElementById('role-status').textContent = "Current Mode: " + role.toUpperCase();
+    document.getElementById('role-status').textContent = "Mode: " + role.toUpperCase();
     updateActivePanel();
 };
 
-// --- SINCRONIZACIÓN FIREBASE ---
-onValue(ref(db, 'bosses'), (snapshot) => {
-    const data = snapshot.val() || {};
-    activeTimers = [];
-    BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
-        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
-    });
-    for (let id in data) {
-        const boss = BOSSES.find(b => b.id === id);
-        if (boss && data[id].deathTime) {
-            const next = calculateNextSpawn(new Date(data[id].deathTime).getTime(), boss.interval * HOUR_IN_MS);
-            activeTimers.push({ id: boss.id, name: boss.name, targetTime: next, isFixed: false });
-        }
-    }
-    updateActivePanel();
-});
+window.logout = () => {
+    localStorage.removeItem('lordnine_role');
+    location.reload();
+};
 
-// --- FUNCIONES GLOBALES BOTONES ---
 window.handleMarkDead = (id) => set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 window.clearTimer = (id) => remove(ref(db, 'bosses/' + id));
 window.openSetModal = (id) => {
@@ -113,7 +101,7 @@ window.openSetModal = (id) => {
     }
 };
 
-// --- CÁLCULOS Y UI ---
+// --- LÓGICA DE TIEMPO ---
 function calculateNextSpawn(deathMs, intervalMs) {
     let target = deathMs + intervalMs;
     const now = Date.now();
@@ -134,6 +122,23 @@ function calculateNextFixedTarget(boss) {
     return nextTarget;
 }
 
+// --- ACTUALIZACIÓN DE INTERFAZ ---
+onValue(ref(db, 'bosses'), (snapshot) => {
+    const data = snapshot.val() || {};
+    activeTimers = [];
+    BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
+        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
+    });
+    for (let id in data) {
+        const boss = BOSSES.find(b => b.id === id);
+        if (boss && data[id].deathTime) {
+            const next = calculateNextSpawn(new Date(data[id].deathTime).getTime(), boss.interval * HOUR_IN_MS);
+            activeTimers.push({ id: boss.id, name: boss.name, targetTime: next, isFixed: false });
+        }
+    }
+    updateActivePanel();
+});
+
 function updateActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = Date.now();
@@ -149,7 +154,7 @@ function updateActivePanel() {
                 </div>
                 <div class="timer-countdown">
                     <span class="countdown-value">${countdown}</span>
-                    ${(userRole === 'admin' && !t.isFixed) ? `<button class="clear-btn" onclick="clearTimer('${t.id}')">Clear</button>` : ''}
+                    ${(userRole === 'admin' && !t.isFixed) ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">Clear</button>` : ''}
                 </div>
             </div>`;
     }).join('');
@@ -184,22 +189,30 @@ function generateBossUI() {
             <div class="action-column">
                 ${!boss.fixedSchedule ? `
                     <div class="button-group">
-                        <button class="mark-dead-btn" onclick="handleMarkDead('${boss.id}')">Mark Dead</button>
-                        <button class="set-btn" onclick="openSetModal('${boss.id}')">Set</button>
+                        <button class="mark-dead-btn" onclick="window.handleMarkDead('${boss.id}')">Mark Dead</button>
+                        <button class="set-btn" onclick="window.openSetModal('${boss.id}')">Set</button>
                     </div>` : '<span class="fixed-badge">FIXED</span>'}
             </div>
         </div>`).join('');
 }
 
+// Buscador
 window.filterBosses = () => {
     const val = document.getElementById('search-boss').value.toLowerCase();
     document.querySelectorAll('.boss-tracker').forEach(c => c.style.display = c.innerText.toLowerCase().includes(val) ? 'flex' : 'none');
 };
-document.getElementById('search-boss').addEventListener('keyup', filterBosses);
+document.getElementById('search-boss').addEventListener('keyup', window.filterBosses);
 
-setInterval(() => {
-    document.getElementById('local-time-display').textContent = "Local Time: " + new Date().toLocaleTimeString();
-    updateActivePanel();
-}, 1000);
-
-document.addEventListener('DOMContentLoaded', generateBossUI);
+// Inicialización
+document.addEventListener('DOMContentLoaded', () => {
+    if (!userRole) {
+        document.getElementById('role-selection-overlay').style.display = 'flex';
+    } else {
+        window.setRole(userRole);
+    }
+    generateBossUI();
+    setInterval(() => {
+        document.getElementById('local-time-display').textContent = "Local Time: " + new Date().toLocaleTimeString();
+        updateActivePanel();
+    }, 1000);
+});
