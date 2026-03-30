@@ -167,7 +167,7 @@ function renderBossList(filter = "") {
             // Generar texto de horarios si es FIXED
             let scheduleText = "";
             if (b.fixedSchedule) {
-                const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 scheduleText = b.fixedSchedule.map(s => 
                     `${days[s.day]} ${String(s.hour).padStart(2,'0')}:${String(s.minute).padStart(2,'0')}`
                 ).join(" | ");
@@ -183,7 +183,7 @@ function renderBossList(filter = "") {
                     </div>
                     ${b.fixedSchedule ? 
                         `<span class="fixed-schedule-list" style="color: #d4af37;">📅 ${scheduleText}</span>` : 
-                        `<span class="interval-text">⏳ CADA ${b.interval}H</span>`
+                        `<span class="interval-text">⏳ Re-Spawn Every ${b.interval}H</span>`
                     }
                     <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:5px;">
                 </div>
