@@ -63,22 +63,40 @@ const BOSSES = [
 let activeTimers = [];
 
 // --- FUNCIONES DE TIEMPO (JST UTC+9) ---
-function getJST() {
-    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-}
 
 function getNow() {
     return Date.now();
 }
 
 function calculateNextFixedTarget(boss) {
-    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-    const WEEK_IN_MS = 7 * DAY_IN_MS;
+    const nowUTC = Date.now();
+    const JST_OFFSET = 9 * HOUR_IN_MS;
 
-    const currentTimeOfWeekMs =
-        (nowJST.getDay() * DAY_IN_MS) +
-        (nowJST.getHours() * HOUR_IN_MS) +
-        (nowJST.getMinutes() * 60000);
+    // Convertimos UTC → JST correctamente
+    const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+});
+
+const parts = formatter.formatToParts(new Date(nowUTC));
+
+const dayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+
+let day, hour, minute;
+
+parts.forEach(p => {
+    if (p.type === 'weekday') day = dayMap[p.value];
+    if (p.type === 'hour') hour = parseInt(p.value);
+    if (p.type === 'minute') minute = parseInt(p.value);
+});
+
+const currentTimeOfWeekMs =
+    (day * DAY_IN_MS) +
+    (hour * HOUR_IN_MS) +
+    (minute * 60000);
 
     let nextTarget = Infinity;
 
@@ -91,7 +109,9 @@ function calculateNextFixedTarget(boss) {
         let diff = targetMs - currentTimeOfWeekMs;
         if (diff <= 0) diff += WEEK_IN_MS;
 
-        const candidate = nowJST.getTime() + diff;
+        // 🔥 CLAVE: volver a UTC correctamente
+        const candidate = nowUTC + diff;
+
         if (candidate < nextTarget) nextTarget = candidate;
     });
 
@@ -263,7 +283,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBossList();
     setInterval(() => {
         const clock = document.getElementById('jst-time-display');
-        if(clock) clock.textContent = "Server Time (JST): " + getJST().toLocaleTimeString('en-US', {hour12:false});
+        if(clock) clock.textContent = "Server Time (JST): " + new Date().toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Tokyo',
+    hour12: false
+});
         renderActivePanel();
     }, 1000);
 });
