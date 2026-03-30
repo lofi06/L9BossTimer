@@ -8,6 +8,7 @@ const firebaseConfig = {
     authDomain: "lordnine-tracker-e3a97.firebaseapp.com",
     databaseURL: "https://lordnine-tracker-e3a97-default-rtdb.firebaseio.com",
     projectId: "lordnine-tracker-e3a97",
+    storageBucket: "lordnine-tracker-e3a97.firebasestorage.app",
     appId: "1:923786523326:web:45eb3278eef5851b2524ef"
 };
 
@@ -61,7 +62,7 @@ const BOSSES = [
 
 let activeTimers = [];
 
-// --- JST HELPERS ---
+// --- FUNCIONES DE TIEMPO (JST UTC+9) ---
 function getJST() {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
 }
@@ -83,28 +84,30 @@ function calculateNextFixedTarget(boss) {
 
 function formatTime(ms) {
     if (ms <= 0) return "ALIVE";
-    const s = Math.floor((ms / 1000) % 60);
-    const m = Math.floor((ms / 60000) % 60);
-    const h = Math.floor((ms / 3600000) % 24);
-    const d = Math.floor(ms / (24 * 3600000));
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / (1000 * 60)) % 60);
+    const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
 
     let parts = [];
-    if (d > 0) parts.push(`${d}d`);
-    parts.push(`${String(h).padStart(2, '0')}h`);
-    parts.push(`${String(m).padStart(2, '0')}m`);
-    parts.push(`${String(s).padStart(2, '0')}s`);
+    if (days > 0) parts.push(`${days}d`);
+    parts.push(`${String(hours).padStart(2, '0')}h`);
+    parts.push(`${String(minutes).padStart(2, '0')}m`);
+    parts.push(`${String(seconds).padStart(2, '0')}s`);
     return parts.join(' ');
 }
 
-// --- FIREBASE SYNC ---
+// --- FIREBASE LOGIC ---
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
     activeTimers = [];
 
+    // Bosses Fijos
     BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
         activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
     });
 
+    // Bosses por Intervalo
     if (data) {
         for (let id in data) {
             const boss = BOSSES.find(b => b.id === id);
@@ -120,21 +123,28 @@ onValue(ref(db, 'bosses'), (snapshot) => {
     renderActivePanel();
 });
 
-// --- ACCIONES ---
+// ACCIONES
 window.markDead = (id) => {
     set(ref(db, 'bosses/' + id), { deathTime: getJST().toISOString() });
 };
 
 window.setManualTime = (id) => {
     const input = document.getElementById(`time-input-${id}`);
+    
+    // Si está oculto, lo mostramos y cargamos la hora de Japón actual
     if (input.style.display === "none") {
         const nowJST = getJST();
-        const offset = nowJST.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(nowJST - offset)).toISOString().slice(0, 16);
-        input.value = localISOTime;
+        const year = nowJST.getFullYear();
+        const month = String(nowJST.getMonth() + 1).padStart(2, '0');
+        const day = String(nowJST.getDate()).padStart(2, '0');
+        const hours = String(nowJST.getHours()).padStart(2, '0');
+        const minutes = String(nowJST.getMinutes()).padStart(2, '0');
+        
+        input.value = `${year}-${month}-${day}T${hours}:${minutes}`;
         input.style.display = "block";
         input.focus();
     } else {
+        // Si ya es visible y tiene valor, guardamos
         if (input.value) {
             set(ref(db, 'bosses/' + id), { deathTime: new Date(input.value).toISOString() });
             input.style.display = "none";
@@ -148,30 +158,30 @@ window.clearTimer = (id) => {
     if(confirm("¿Eliminar timer?")) remove(ref(db, 'bosses/' + id));
 };
 
-// --- RENDERIZADO (CON TIPOGRAFÍA UNIFICADA) ---
+// --- RENDERIZADO ---
 function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
     container.innerHTML = BOSSES
         .filter(b => b.name.toLowerCase().includes(filter) || b.location.toLowerCase().includes(filter))
         .map(b => `
-            <div class="boss-tracker" style="font-family: 'Cinzel', serif;">
+            <div class="boss-tracker">
                 <img src="images/${b.id}.png" class="boss-image" onerror="this.src='https://via.placeholder.com/60/161b22/d4af37?text=BOSS';">
                 <div class="boss-info">
-                    <h2 class="boss-name-gradient" style="font-family: 'Cinzel', serif; letter-spacing: 1px;">${b.name.toUpperCase()}</h2>
-                    <div class="subtitle-group" style="font-family: 'Cinzel', serif;">
+                    <h2 class="boss-name-gradient">${b.name.toUpperCase()}</h2>
+                    <div class="subtitle-group">
                         <span class="boss-level">LVL ${b.level}</span> | <span class="location-text">${b.location}</span>
                     </div>
                     ${b.fixedSchedule ? 
-                        `<span class="fixed-schedule-list" style="font-family: 'Cinzel', serif; color: #d4af37;">📅 FIXED SCHEDULE</span>` : 
-                        `<span class="interval-text" style="font-family: 'Cinzel', serif;">⏳ RESP. EVERY ${b.interval}H</span>`
+                        `<span class="fixed-schedule-list">📅 FIXED: Ver Horario</span>` : 
+                        `<span class="interval-text">⏳ RE-SPAWN EVERY: ${b.interval}H</span>`
                     }
-                    <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:8px; font-family: 'Cinzel', serif;">
+                    <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:8px;">
                 </div>
                 <div class="action-column">
                     ${!b.fixedSchedule ? `
-                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')" style="font-family: 'Cinzel', serif;">DEAD</button>
-                        <button class="set-btn" onclick="window.setManualTime('${b.id}')" style="font-family: 'Cinzel', serif;">SET</button>
-                    ` : '<span class="fixed-badge" style="font-family: 'Cinzel', serif;">AUTO</span>'}
+                        <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">DEAD</button>
+                        <button class="set-btn" onclick="window.setManualTime('${b.id}')">SET</button>
+                    ` : '<span class="fixed-badge">AUTO</span>'}
                 </div>
             </div>
         `).join('');
@@ -185,35 +195,37 @@ function renderActivePanel() {
     activeTimers.forEach(t => map.set(t.id, t));
     const sorted = Array.from(map.values()).sort((a, b) => a.targetTime - b.targetTime);
 
-    panel.innerHTML = sorted.length === 0 ? '<p style="text-align:center; color:#8b949e; font-family: \'Cinzel\', serif;">No active timers.</p>' : sorted.map(t => {
+    if (sorted.length === 0) {
+        panel.innerHTML = '<p class="no-timers">No active timers.</p>';
+        return;
+    }
+
+    panel.innerHTML = sorted.map(t => {
         const diff = t.targetTime - now;
         const isUrgent = diff < 300000 && diff > 0;
         return `
-            <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}" style="font-family: 'Cinzel', serif;">
+            <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
                 <div class="timer-info">
-                    <h3 style="font-family: 'Cinzel', serif; letter-spacing: 1px;">${t.name.toUpperCase()}</h3>
-                    <p style="font-family: 'Cinzel', serif;">Next: ${new Date(t.targetTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</p>
+                    <h3>${t.name}</h3>
+                    <p>Next: ${new Date(t.targetTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false})}</p>
                 </div>
                 <div class="timer-values" style="text-align:right">
-                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="font-family: 'Cinzel', serif; color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
+                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
                         ${diff < 0 ? 'ALIVE' : formatTime(diff)}
                     </span>
-                    ${!t.isFixed ? `<br><button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
+                    ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// --- INICIALIZACIÓN ---
+// Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     renderBossList();
     setInterval(() => {
         const clock = document.getElementById('jst-time-display');
-        if(clock) {
-            clock.textContent = "SERVER TIME (JST): " + getJST().toLocaleTimeString('en-US', {hour12:false});
-            clock.style.fontFamily = "'Cinzel', serif";
-        }
+        if(clock) clock.textContent = "Server Time (JST): " + getJST().toLocaleTimeString('en-US', {hour12:false});
         renderActivePanel();
     }, 1000);
 });
