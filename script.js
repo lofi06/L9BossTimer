@@ -179,15 +179,15 @@ window.setManualTime = (id) => {
             const [hour, minute] = timePart.split(":").map(Number);
             
             // Crear fecha como JST y convertir a UTC correctamente
-            const localDate = new Date(input.value);
-
-            // Convertir de LOCAL → JST → UTC
-            const jstOffset = 9 * 60; // minutos
-            const localOffset = localDate.getTimezoneOffset(); // Colombia ~ +300
+            const [datePart, timePart] = input.value.split("T");
+            const [year, month, day] = datePart.split("-").map(Number);
+            const [hour, minute] = timePart.split(":").map(Number);
             
-            const corrected = new Date(localDate.getTime() + (localOffset + jstOffset) * 60000);
+            // Crear fecha como si fuera JST (no local)
+            const jstDate = new Date(Date.UTC(year, month - 1, day, hour - 9, minute));
             
-            set(ref(db, 'bosses/' + id), { deathTime: corrected.toISOString() });
+            // Guardar en UTC correcto
+            set(ref(db, 'bosses/' + id), { deathTime: jstDate.toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
