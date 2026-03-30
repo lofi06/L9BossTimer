@@ -167,7 +167,7 @@ onValue(ref(db, 'bosses'), (snapshot) => {
 
 // ACCIONES
 window.markDead = (id) => {
-    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
+    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })); set(ref(db, 'bosses/' + id), { deathTime: nowJST.toISOString() });
 };
 
 window.setManualTime = (id) => {
@@ -188,7 +188,8 @@ window.setManualTime = (id) => {
     } else {
         // Si ya es visible y tiene valor, guardamos
         if (input.value) {
-            set(ref(db, 'bosses/' + id), { deathTime: new Date(input.value).toISOString() });
+            const jstDate = new Date(new Date(input.value).toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+set(ref(db, 'bosses/' + id), { deathTime: jstDate.toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
