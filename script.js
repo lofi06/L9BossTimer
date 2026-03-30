@@ -154,7 +154,7 @@ onValue(ref(db, 'bosses'), (snapshot) => {
         for (let id in data) {
             const boss = BOSSES.find(b => b.id === id);
             if (boss && data[id].deathTime) {
-                const deathTime = new Date(data[id].deathTime).getTime();
+                const deathTime = Date.parse(data[id].deathTime);
                 let target = deathTime + (boss.interval * HOUR_IN_MS);
                 const now = getNow();
                 while (target < now) { target += (boss.interval * HOUR_IN_MS); }
