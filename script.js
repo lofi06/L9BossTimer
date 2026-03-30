@@ -183,11 +183,11 @@ window.setManualTime = (id) => {
             const [year, month, day] = datePart.split("-").map(Number);
             const [hour, minute] = timePart.split(":").map(Number);
             
-            // Crear fecha como si fuera JST (no local)
-            const jstDate = new Date(Date.UTC(year, month - 1, day, hour - 9, minute));
+            // Crear fecha en UTC equivalente a JST
+            const utcTime = Date.UTC(year, month - 1, day, hour - 9, minute);
             
-            // Guardar en UTC correcto
-            set(ref(db, 'bosses/' + id), { deathTime: jstDate.toISOString() });
+            // Guardar directamente
+            set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
