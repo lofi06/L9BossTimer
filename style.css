@@ -1,131 +1,215 @@
-/* GENERAL STYLES */
+/* =======================================================
+   GENERAL STYLES & FONTS
+   ======================================================= */
 body {
     font-family: 'Roboto', sans-serif;
     background-color: #0d1117;
-    color: #c9d1d9;
+    color: #c9d1d9; 
     margin: 0;
-    overflow-y: hidden;
+    height: 100vh;
+    overflow: hidden; /* Evita el scroll global para usar scroll interno */
 }
 
 header {
-    background-color: #161b22;
-    padding: 20px 40px;
+    background-color: #161b22; 
+    padding: 15px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #30363d;
+    height: 70px;
+    box-sizing: border-box;
 }
 
-header h1 {
+.logo-text h1 {
     font-family: 'Cinzel', serif;
     color: #d4af37;
+    font-size: 1.4em;
     margin: 0;
+    letter-spacing: 1px;
 }
 
-#search-boss {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    width: 250px;
+.server-time {
+    color: #8b949e; 
+    font-size: 0.85em;
+    font-family: 'Roboto Mono', monospace;
 }
 
-/* LAYOUT */
+/* =======================================================
+   MAIN LAYOUT (TWO COLUMNS)
+   ======================================================= */
 .main-layout {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 20px;
-    padding: 20px;
-    height: calc(100vh - 100px);
+    display: flex;
+    height: calc(100vh - 70px); /* Resta la altura del header */
+    gap: 0;
 }
 
-.boss-list-container, .active-timers-container {
-    background: #161b22;
-    border-radius: 8px;
-    padding: 20px;
-    overflow-y: auto;
-    border: 1px solid #30363d;
+/* Columna Izquierda: Lista de Bosses */
+.boss-list-container {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #30363d;
 }
 
-h2 {
-    font-family: 'Cinzel', serif;
-    color: #d4af37;
+/* Columna Derecha: Timers Activos */
+.active-timers-container {
+    flex: 1;
+    background-color: #0d1117;
+    display: flex;
+    flex-direction: column;
+    min-width: 320px;
+}
+
+.section-header {
+    background-color: #161b22;
+    padding: 15px 20px;
     border-bottom: 1px solid #30363d;
-    padding-bottom: 10px;
 }
 
-/* BOSS CARDS */
+.section-header h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1em;
+    margin: 0;
+    color: #d4af37;
+    text-align: center;
+}
+
+/* Contenedores con Scroll Independiente */
+#bosses-container, #active-timers-display {
+    overflow-y: auto;
+    flex-grow: 1;
+    padding: 10px;
+}
+
+/* Personalización del Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #d4af37; }
+
+/* =======================================================
+   BOSS CARDS (LIST)
+   ======================================================= */
 .boss-tracker {
     display: flex;
-    background: #0d1117;
-    margin-bottom: 10px;
-    padding: 15px;
-    border-radius: 6px;
-    border: 1px solid #30363d;
     align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #21262d;
+    transition: 0.2s;
 }
 
+.boss-tracker:hover { background-color: #161b22; }
+
 .boss-image {
-    width: 60px;
-    height: 60px;
-    border: 2px solid #d4af37;
+    width: 50px; height: 50px;
     border-radius: 4px;
+    border: 1px solid #d4af37;
     margin-right: 15px;
+    object-fit: cover;
 }
 
 .boss-name-gradient {
     font-family: 'Cinzel', serif;
+    font-size: 1.1em;
     color: #e5d8b6;
     margin: 0;
-    font-size: 1.1em;
 }
 
-.location-text { color: #2ecc71; font-size: 0.85em; font-weight: bold; }
+.subtitle-group {
+    font-size: 0.8em;
+    margin-top: 3px;
+}
 
-/* ACTIVE TIMERS & ALERTS */
+.boss-level { color: #d4af37; font-weight: bold; }
+.location-text { color: #4CAF50; }
+
+.action-column {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Botones con los colores del CSS antiguo */
+.mark-dead-btn {
+    font-family: 'Cinzel', serif;
+    background-color: #375a3c;
+    color: white;
+    border: none; padding: 6px 12px;
+    border-radius: 4px; cursor: pointer;
+    transition: 0.2s;
+}
+.mark-dead-btn:hover { background-color: #4c7752; }
+
+.set-btn {
+    font-family: 'Cinzel', serif;
+    background-color: #805d93;
+    color: white;
+    border: none; padding: 4px 8px;
+    border-radius: 4px; cursor: pointer;
+}
+
+/* =======================================================
+   ACTIVE TIMER CARDS (PANEL)
+   ======================================================= */
 .active-timer-card {
+    background-color: #161b22;
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 6px;
     display: flex;
     justify-content: space-between;
-    padding: 10px;
-    border-bottom: 1px dashed #30363d;
+    align-items: center;
+    border-left: 3px solid #30363d;
 }
 
+/* Estado Imminente: Cuando faltan menos de 5 min */
 .boss-imminent {
-    animation: pulse-red 2s infinite;
-    border: 1px solid #ff4444;
+    border-left-color: #ff7b72;
+    animation: pulse-border 2s infinite;
 }
 
-@keyframes pulse-red {
-    0% { background: #161b22; }
-    50% { background: #2a0a0a; }
-    100% { background: #161b22; }
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0px rgba(255, 123, 114, 0); }
+    50% { box-shadow: 0 0 10px rgba(255, 123, 114, 0.3); }
+    100% { box-shadow: 0 0 0px rgba(255, 123, 114, 0); }
 }
 
-.countdown-value { font-weight: bold; color: #4CAF50; }
-.clear-btn { background: #9f86c0; border: none; color: white; cursor: pointer; padding: 2px 5px; border-radius: 3px; font-size: 0.7em; }
-
-/* LOADING SCREEN */
-#loading-screen {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #0d1117; display: flex; flex-direction: column;
-    justify-content: center; align-items: center; z-index: 10001;
+.countdown-value {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 1.2em;
+    font-weight: bold;
 }
 
-.loader {
-    border: 4px solid #30363d; border-top: 4px solid #d4af37;
-    border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+.clear-btn {
+    background: transparent;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 0.8em;
 }
+.clear-btn:hover { color: #ff7b72; border-color: #ff7b72; }
 
-@keyframes spin { 100% { transform: rotate(360deg); } }
-
-/* ROLE OVERLAY */
-#role-selection-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.95); display: flex; justify-content: center;
-    align-items: center; z-index: 10000;
+/* Buscador */
+#search-boss {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    width: 250px;
+    transition: 0.3s;
 }
+#search-boss:focus { border-color: #d4af37; outline: none; width: 300px; }
 
-.overlay-content { text-align: center; border: 2px solid #d4af37; padding: 40px; background: #161b22; }
-.admin-btn { background: #d4af37; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-.user-btn { background: #30363d; color: white; padding: 10px 20px; cursor: pointer; }
+.fixed-badge {
+    font-size: 0.7em;
+    background: #d4af37;
+    color: #0d1117;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+}
