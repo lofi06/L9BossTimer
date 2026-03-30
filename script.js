@@ -163,28 +163,38 @@ function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
     container.innerHTML = BOSSES
         .filter(b => b.name.toLowerCase().includes(filter) || b.location.toLowerCase().includes(filter))
-        .map(b => `
+        .map(b => {
+            // Generar texto de horarios si es FIXED
+            let scheduleText = "";
+            if (b.fixedSchedule) {
+                const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                scheduleText = b.fixedSchedule.map(s => 
+                    `${days[s.day]} ${String(s.hour).padStart(2,'0')}:${String(s.minute).padStart(2,'0')}`
+                ).join(" | ");
+            }
+
+            return `
             <div class="boss-tracker">
-                <img src="images/${b.id}.png" class="boss-image" onerror="this.src='https://via.placeholder.com/60/161b22/d4af37?text=BOSS';">
+                <img src="images/${b.id}.png" class="boss-image" onerror="this.src='https://via.placeholder.com/50/161b22/d4af37?text=B';">
                 <div class="boss-info">
-                    <h2 class="boss-name-gradient">${b.name.toUpperCase()}</h2>
+                    <h2>${b.name.toUpperCase()}</h2>
                     <div class="subtitle-group">
                         <span class="boss-level">LVL ${b.level}</span> | <span class="location-text">${b.location}</span>
                     </div>
                     ${b.fixedSchedule ? 
-                        `<span class="fixed-schedule-list">📅 FIXED: Ver Horario</span>` : 
-                        `<span class="interval-text">⏳ RE-SPAWN EVERY: ${b.interval}H</span>`
+                        `<span class="fixed-schedule-list" style="color: #d4af37;">📅 ${scheduleText}</span>` : 
+                        `<span class="interval-text">⏳ CADA ${b.interval}H</span>`
                     }
-                    <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:8px;">
+                    <input type="datetime-local" id="time-input-${b.id}" class="manual-input" style="display:none; margin-top:5px;">
                 </div>
                 <div class="action-column">
                     ${!b.fixedSchedule ? `
                         <button class="mark-dead-btn" onclick="window.markDead('${b.id}')">DEAD</button>
                         <button class="set-btn" onclick="window.setManualTime('${b.id}')">SET</button>
-                    ` : '<span class="fixed-badge">AUTO</span>'}
+                    ` : '<span class="fixed-badge" style="font-weight:bold; color:#d4af37; font-size:0.8em;">AUTO</span>'}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
 }
 
 function renderActivePanel() {
