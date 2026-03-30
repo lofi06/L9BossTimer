@@ -15,7 +15,7 @@
             <p id="local-time-display">Local Time: --:--:--</p>
         </div>
         
-        <input type="text" id="search-boss" placeholder="Search boss or location..." onkeyup="filterBosses()">
+        <input type="text" id="search-boss" placeholder="Search boss or location...">
     </header>
 
     <div class="main-layout">
@@ -34,12 +34,11 @@
             </div>
 
             <div class="footer-actions">
-                <p>Last kill time is saved automatically.</p> 
-                <button onclick="saveAllData()">Save All Times</button> 
-            </div>
+                <p>Timers are synchronized in real-time with Firebase.</p> 
+                </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
