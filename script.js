@@ -70,34 +70,21 @@ function getNow() {
 }
 
 function calculateNextFixedTarget(boss) {
-    const nowUTC = Date.now();
-    const JST_OFFSET = 9 * HOUR_IN_MS;
+    const now = Date.now();
 
-    // Convertimos UTC → JST correctamente
-    const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Tokyo',
-    weekday: 'short',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false
-});
+    const nowDate = new Date(now);
 
-const parts = formatter.formatToParts(new Date(nowUTC));
+    // Convertir a JST SOLO para obtener día/hora
+    const jst = new Date(nowDate.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
 
-const dayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+    const day = jst.getDay();
+    const hour = jst.getHours();
+    const minute = jst.getMinutes();
 
-let day, hour, minute;
-
-parts.forEach(p => {
-    if (p.type === 'weekday') day = dayMap[p.value];
-    if (p.type === 'hour') hour = parseInt(p.value);
-    if (p.type === 'minute') minute = parseInt(p.value);
-});
-
-const currentTimeOfWeekMs =
-    (day * DAY_IN_MS) +
-    (hour * HOUR_IN_MS) +
-    (minute * 60000);
+    const currentTimeOfWeekMs =
+        (day * DAY_IN_MS) +
+        (hour * HOUR_IN_MS) +
+        (minute * 60000);
 
     let nextTarget = Infinity;
 
@@ -110,8 +97,7 @@ const currentTimeOfWeekMs =
         let diff = targetMs - currentTimeOfWeekMs;
         if (diff <= 0) diff += WEEK_IN_MS;
 
-        // 🔥 CLAVE: volver a UTC correctamente
-        const candidate = nowUTC + diff;
+        const candidate = now + diff;
 
         if (candidate < nextTarget) nextTarget = candidate;
     });
@@ -167,7 +153,8 @@ onValue(ref(db, 'bosses'), (snapshot) => {
 
 // ACCIONES
 window.markDead = (id) => {
-    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })); set(ref(db, 'bosses/' + id), { deathTime: nowJST.toISOString() });
+    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    set(ref(db, 'bosses/' + id), { deathTime: nowJST.toISOString() });
 };
 
 window.setManualTime = (id) => {
