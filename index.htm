@@ -8,11 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="role-selection-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; font-family:'Cinzel', serif; text-align:center;">
+    <div id="role-selection-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; justify-content:center; align-items:center; flex-direction:column; font-family:'Cinzel', serif; text-align:center;">
         <h2 style="color:#ffcc00; margin-bottom:30px; letter-spacing: 2px;">SELECT YOUR ROLE</h2>
         <div style="display:flex; gap:25px;">
-            <button onclick="askAdminPassword()" style="padding:15px 40px; background:#ffcc00; color:black; border:none; border-radius:5px; cursor:pointer; font-weight:bold; transition: 0.3s;">ADMIN</button>
-            <button onclick="setRole('user')" style="padding:15px 40px; background:#444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; transition: 0.3s;">USER</button>
+            <button onclick="window.askAdminPassword()" style="padding:15px 40px; background:#ffcc00; color:black; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">ADMIN</button>
+            <button onclick="window.setRole('user')" style="padding:15px 40px; background:#444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">USER</button>
         </div>
         <p style="color: #888; margin-top: 20px; font-family: 'Roboto'; font-size: 0.9em;">Admin can clear active timers. User can mark and set times.</p>
     </div>
@@ -38,7 +38,8 @@
                 <p class="no-timers">No active timers.</p>
             </div>
             <div class="footer-actions">
-                <p id="role-status">Current Mode: Guest</p>
+                <p id="role-status">Mode: Loading...</p>
+                <button onclick="window.logout()" style="background:none; border:none; color:#888; text-decoration:underline; cursor:pointer; font-size:0.8em;">Change Role</button>
             </div>
         </div>
     </div>
