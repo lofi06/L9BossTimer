@@ -1,18 +1,26 @@
 /* =======================================================
-   GENERAL & FONTS
+   LORDNINE TRACKER - ESTILO UNIFICADO (CINZEL)
    ======================================================= */
+
+/* Importación de fuente (Asegúrate de tenerla en tu HTML) */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+
 body {
-    font-family: 'Cinzel', serif; /* Aplicado a todo el documento */
+    font-family: 'Cinzel', serif;
     background-color: #0d1117;
     color: #c9d1d9;
     margin: 0;
     height: 100vh;
     overflow: hidden;
+    font-size: 0.85em; /* Reducción general de todas las fuentes */
 }
 
+/* =======================================================
+   HEADER (TÍTULO Y BUSCADOR)
+   ======================================================= */
 header {
     background-color: #161b22;
-    padding: 25px 40px;
+    padding: 10px 30px; /* Reducido para ahorrar espacio vertical */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -21,16 +29,17 @@ header {
 
 .logo-text h1 {
     color: #d4af37;
-    font-size: 1.6em;
-    margin: 0 0 5px 0;
+    font-size: 1.3em; /* Un poco más pequeño que antes */
+    margin: 0;
     letter-spacing: 2px;
     font-weight: 700;
+    text-transform: uppercase;
 }
 
 .server-time {
     color: #8b949e;
-    font-family: 'Roboto Mono', monospace; /* El reloj se queda en Mono para que no salte */
-    font-size: 0.9em;
+    font-size: 0.8em;
+    margin-top: 2px;
 }
 
 #search-boss {
@@ -38,81 +47,218 @@ header {
     background: #0d1117;
     border: 1px solid #30363d;
     color: white;
-    padding: 10px 15px;
-    border-radius: 6px;
-    width: 250px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    width: 200px;
     outline: none;
+    font-size: 0.85em;
 }
 
 /* =======================================================
-   COLUMNS & SCROLL
+   LAYOUT PRINCIPAL
    ======================================================= */
-.main-layout { display: flex; height: calc(100vh - 100px); }
-.boss-list-container { flex: 3; border-right: 1px solid #30363d; display: flex; flex-direction: column; }
-.active-timers-container { flex: 1; min-width: 350px; display: flex; flex-direction: column; background: #0d1117; }
+.main-layout { 
+    display: flex; 
+    height: calc(100vh - 70px); /* Ajuste según el nuevo header */
+}
 
-.section-header { padding: 15px; border-bottom: 1px solid #30363d; background: #161b22; }
-.section-header h2 { color: #d4af37; margin: 0; font-size: 1.2em; text-align: center; letter-spacing: 1px; }
+.boss-list-container { 
+    flex: 3; 
+    border-right: 1px solid #30363d; 
+    display: flex; 
+    flex-direction: column; 
+}
 
-#bosses-container, #active-timers-display { overflow-y: auto; flex-grow: 1; padding: 15px; }
+.active-timers-container { 
+    flex: 1; 
+    min-width: 320px; 
+    display: flex; 
+    flex-direction: column; 
+    background: #0d1117; 
+}
+
+.section-header { 
+    padding: 10px; 
+    border-bottom: 1px solid #30363d; 
+    background: #161b22; 
+}
+
+.section-header h2 { 
+    color: #d4af37; 
+    margin: 0; 
+    font-size: 1.1em; 
+    text-align: center; 
+    letter-spacing: 1px; 
+}
+
+#bosses-container, #active-timers-display { 
+    overflow-y: auto; 
+    flex-grow: 1; 
+    padding: 10px; 
+}
 
 /* =======================================================
-   BOSS CARDS
+   LISTA DE BOSSES (CORRECCIÓN DE BOTONES)
    ======================================================= */
 .boss-tracker {
     display: flex;
+    justify-content: space-between; /* Empuja los botones a la derecha */
     align-items: center;
-    padding: 15px;
+    padding: 10px 15px;
     border-bottom: 1px solid #21262d;
+    background: rgba(22, 27, 34, 0.5);
+    margin-bottom: 2px;
 }
 
-.boss-image { width: 55px; height: 55px; border: 1px solid #d4af37; border-radius: 4px; margin-right: 15px; }
+.boss-image { 
+    width: 45px; 
+    height: 45px; 
+    border: 1px solid #d4af37; 
+    border-radius: 4px; 
+    margin-right: 15px; 
+}
 
-.boss-info h2 { color: #e5d8b6; margin: 0; font-size: 1.3em; letter-spacing: 1px; }
-.subtitle-group { font-size: 0.9em; margin: 5px 0; color: #8b949e; }
+.boss-info {
+    flex-grow: 1; /* Toma el espacio disponible */
+}
+
+.boss-info h2 { 
+    color: #e5d8b6; 
+    margin: 0; 
+    font-size: 1.05em; 
+    letter-spacing: 1px; 
+}
+
+.subtitle-group { 
+    font-size: 0.75em; 
+    margin: 3px 0; 
+    color: #8b949e; 
+}
+
 .boss-level { color: #d4af37; font-weight: bold; }
 .location-text { color: #4CAF50; }
 
-.fixed-schedule-list { font-size: 0.8em; color: #d4af37; margin-top: 5px; font-weight: bold; display: block; }
-.interval-text { font-size: 0.8em; color: #8b949e; }
+.fixed-schedule-list { 
+    font-size: 0.75em; 
+    color: #d4af37; 
+    margin-top: 3px; 
+    font-weight: bold; 
+    display: block; 
+}
 
-/* Botones */
+.interval-text { 
+    font-size: 0.75em; 
+    color: #8b949e; 
+}
+
+/* Columna fija de botones */
+.action-column {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 85px; /* Evita que se encoja */
+    align-items: flex-end; /* Alinea botones a la derecha */
+}
+
 .mark-dead-btn { 
     font-family: 'Cinzel', serif; 
-    background: #375a3c; color: white; border: none; 
-    padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: 700;
+    background: #238636; 
+    color: white; 
+    border: none; 
+    padding: 5px 10px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-weight: 700;
+    font-size: 0.75em;
+    width: 100%;
 }
+
 .set-btn { 
     font-family: 'Cinzel', serif; 
-    background: #805d93; color: white; border: none; 
-    padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;
+    background: #8e44ad; 
+    color: white; 
+    border: none; 
+    padding: 4px 10px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-size: 0.7em;
+    width: 100%;
+}
+
+.fixed-badge {
+    color: #d4af37;
+    font-weight: bold;
+    font-size: 0.75em;
+    border: 1px solid #d4af37;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 /* =======================================================
-   ACTIVE TIMERS PANEL
+   PANEL DE TIMERS ACTIVOS
    ======================================================= */
 .active-timer-card {
-    background: #161b22; margin-bottom: 12px; padding: 15px; border-radius: 8px;
-    border-left: 4px solid #30363d; display: flex; justify-content: space-between; align-items: center;
+    background: #161b22; 
+    margin-bottom: 10px; 
+    padding: 12px; 
+    border-radius: 6px;
+    border-left: 3px solid #d4af37; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
 }
 
-.active-timer-card h3 { margin: 0; font-size: 1.1em; color: #e5d8b6; letter-spacing: 1px; }
-.active-timer-card p { font-size: 0.8em; color: #8b949e; margin: 3px 0; }
+.active-timer-card h3 { 
+    margin: 0; 
+    font-size: 0.95em; 
+    color: #e5d8b6; 
+}
+
+.active-timer-card p { 
+    font-size: 0.75em; 
+    color: #8b949e; 
+    margin: 2px 0; 
+}
 
 .countdown-value {
-    font-family: 'Cinzel', serif; /* Aquí también usamos Cinzel para el tiempo */
-    font-size: 1.3em;
+    font-size: 1.1em;
     font-weight: bold;
 }
 
 .clear-btn {
-    background: #21262d; border: 1px solid #d4af37; color: #d4af37;
-    width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-weight: bold;
+    background: transparent; 
+    border: 1px solid #ff4444; 
+    color: #ff4444;
+    width: 22px; 
+    height: 22px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-size: 0.7em;
+    margin-top: 5px;
 }
 
-/* Guild Tag Footer */
-.footer-actions { padding: 20px; border-top: 1px solid #30363d; display: flex; justify-content: center; }
-.guild-tag {
-    font-size: 1.2em; color: #d4af37; border: 1px solid #d4af37;
-    padding: 8px 30px; background: rgba(212, 175, 55, 0.05); letter-spacing: 3px;
+/* =======================================================
+   FOOTER (GUILD TAG)
+   ======================================================= */
+.footer-actions { 
+    padding: 15px; 
+    border-top: 1px solid #30363d; 
+    display: flex; 
+    justify-content: center;
+    background: #0d1117;
 }
+
+.guild-tag {
+    font-size: 0.85em; 
+    color: #d4af37; 
+    border: 1px solid #d4af37;
+    padding: 6px 25px; 
+    background: rgba(212, 175, 55, 0.05); 
+    letter-spacing: 2px;
+    margin-bottom: 5px; /* Separación del borde inferior */
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
