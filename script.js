@@ -63,9 +63,6 @@ const BOSSES = [
 let activeTimers = [];
 
 // --- FUNCIONES DE TIEMPO (JST UTC+9) ---
-function getJST() {
-    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-}
 
 function getNow() {
     return Date.now();
