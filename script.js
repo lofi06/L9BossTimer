@@ -1,10 +1,6 @@
-// =======================================================
-// 1. CONFIGURACIÓN DE FIREBASE Y VARIABLES
-// =======================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// Tus credenciales de Firebase (Copiadas de tu imagen)
 const firebaseConfig = {
   apiKey: "AIzaSyB3oUOkKBUplYdPVpt5i2LJdJ1lqEs3HIM",
   authDomain: "lordnine-tracker-e3a97.firebaseapp.com",
@@ -16,13 +12,12 @@ const firebaseConfig = {
   measurementId: "G-3ZVSYZ2G1T"
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const HOUR_IN_MS = 60 * 60 * 1000;
 const DAY_IN_MS = 24 * HOUR_IN_MS;
-const SERVER_TIMEZONE_OFFSET = 9; // JAPÓN (UTC+9)
+const SERVER_TIMEZONE_OFFSET = 9; 
 
 const BOSSES = [
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
@@ -65,145 +60,146 @@ const BOSSES = [
     { id: 'tumier', name: 'Tumier', level: 140, interval: 24, fixedSchedule: [{ day: 0, hour: 20, minute: 0 }], location: 'Kransia' },
 ];
 
-const container = document.getElementById('bosses-container');
 let activeTimers = [];
+let userRole = 'user'; // Por defecto
 
-// =======================================================
-// 2. LÓGICA DE SINCRONIZACIÓN (FIREBASE)
-// =======================================================
+// --- LÓGICA DE ROLES ---
+window.askAdminPassword = () => {
+    const pass = prompt("Enter Admin Password:");
+    if (pass === "1234") { // Cambia "1234" por la clave que quieras
+        setRole('admin');
+    } else {
+        alert("Incorrect password.");
+    }
+};
 
-function saveDeathTimeToDB(bossId, timeValue) {
-    set(ref(db, 'bosses/' + bossId), {
-        deathTime: timeValue
-    });
-}
+window.setRole = (role) => {
+    userRole = role;
+    document.getElementById('role-selection-overlay').style.display = 'none';
+    document.getElementById('role-status').textContent = "Current Mode: " + role.toUpperCase();
+    updateActivePanel();
+};
 
-function clearTimerFromDB(bossId) {
-    set(ref(db, 'bosses/' + bossId), null);
-}
-
-// Escuchar cambios en la base de datos en tiempo real
+// --- SINCRONIZACIÓN FIREBASE ---
 onValue(ref(db, 'bosses'), (snapshot) => {
-    const data = snapshot.val();
-    activeTimers = []; // Reset local para reconstruir con datos de la nube
-    
-    // Iniciar bosses fijos siempre
-    BOSSES.filter(b => b.fixedSchedule).forEach(boss => startFixedScheduleTimer(boss));
-
-    // Cargar muertes reales desde la nube
-    if (data) {
-        for (let bossId in data) {
-            const boss = BOSSES.find(b => b.id === bossId);
-            if (boss && data[bossId].deathTime) {
-                startTimer(boss, data[bossId].deathTime);
-            }
+    const data = snapshot.val() || {};
+    activeTimers = [];
+    BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
+        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
+    });
+    for (let id in data) {
+        const boss = BOSSES.find(b => b.id === id);
+        if (boss && data[id].deathTime) {
+            const next = calculateNextSpawn(new Date(data[id].deathTime).getTime(), boss.interval * HOUR_IN_MS);
+            activeTimers.push({ id: boss.id, name: boss.name, targetTime: next, isFixed: false });
         }
     }
     updateActivePanel();
 });
 
-// =======================================================
-// 3. UTILIDADES DE TIEMPO Y UI
-// =======================================================
+// --- FUNCIONES GLOBALES BOTONES ---
+window.handleMarkDead = (id) => set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
+window.clearTimer = (id) => remove(ref(db, 'bosses/' + id));
+window.openSetModal = (id) => {
+    const input = document.getElementById(`time-input-${id}`);
+    const btn = document.querySelector(`#tracker-${id} .set-btn`);
+    if (input.style.display === 'none' || !input.style.display) {
+        input.style.display = 'block';
+        btn.textContent = 'Confirm';
+    } else if (input.value) {
+        set(ref(db, 'bosses/' + id), { deathTime: new Date(input.value).toISOString() });
+        input.style.display = 'none';
+        btn.textContent = 'Set';
+    }
+};
 
-function calculateNextSpawn(deathTimeMs, intervalMs) {
-    let nextSpawnTarget = deathTimeMs + intervalMs;
-    const now = new Date().getTime();
-    while (nextSpawnTarget < now) { nextSpawnTarget += intervalMs; }
-    return nextSpawnTarget;
+// --- CÁLCULOS Y UI ---
+function calculateNextSpawn(deathMs, intervalMs) {
+    let target = deathMs + intervalMs;
+    const now = Date.now();
+    while (target < now) target += intervalMs;
+    return target;
 }
 
 function calculateNextFixedTarget(boss) {
-    const now = new Date().getTime();
-    let nextTarget = Infinity;    
-    const WEEK_IN_MS = 7 * DAY_IN_MS; 
+    const now = Date.now();
     const nowServer = new Date(now + (SERVER_TIMEZONE_OFFSET * HOUR_IN_MS));
-    const currentTimeOfWeekMs = (nowServer.getUTCDay() * DAY_IN_MS) + (nowServer.getUTCHours() * HOUR_IN_MS) + (nowServer.getUTCMinutes() * 60000) + (nowServer.getUTCSeconds() * 1000);
-
+    const currentTimeOfWeekMs = (nowServer.getUTCDay() * DAY_IN_MS) + (nowServer.getUTCHours() * HOUR_IN_MS) + (nowServer.getUTCMinutes() * 60000);
+    let nextTarget = Infinity;
     boss.fixedSchedule.forEach(sch => {
-        const targetMs = (sch.day * DAY_IN_MS) + (sch.hour * HOUR_IN_MS) + (sch.minute * 60000);
-        let diff = targetMs - currentTimeOfWeekMs;
-        if (diff <= 0) diff += WEEK_IN_MS;
+        let diff = ((sch.day * DAY_IN_MS) + (sch.hour * HOUR_IN_MS) + (sch.minute * 60000)) - currentTimeOfWeekMs;
+        if (diff <= 0) diff += 7 * DAY_IN_MS;
         if (now + diff < nextTarget) nextTarget = now + diff;
     });
-    return nextTarget;    
-}
-
-function startTimer(boss, timeValue) {
-    const nextSpawnTarget = calculateNextSpawn(new Date(timeValue).getTime(), boss.interval * HOUR_IN_MS);
-    const timerData = { id: boss.id, name: boss.name, targetTime: nextSpawnTarget, intervalMs: boss.interval * HOUR_IN_MS, isFixed: false };
-    const idx = activeTimers.findIndex(t => t.id === boss.id);
-    if (idx > -1) activeTimers[idx] = timerData; else activeTimers.push(timerData);
-}
-
-function startFixedScheduleTimer(boss) {
-    const nextSpawnTarget = calculateNextFixedTarget(boss);
-    const timerData = { id: boss.id, name: boss.name, targetTime: nextSpawnTarget, intervalMs: 7 * DAY_IN_MS, isFixed: true };
-    const idx = activeTimers.findIndex(t => t.id === boss.id);
-    if (idx > -1) activeTimers[idx] = timerData; else activeTimers.push(timerData);
+    return nextTarget;
 }
 
 function updateActivePanel() {
     const panel = document.getElementById('active-timers-display');
-    if (!panel) return;
-    const now = new Date().getTime();
-
-    activeTimers.forEach(timer => {
-        let diff = timer.targetTime - now;
-        if (diff < 0) {
-            timer.isAlive = true;
-            timer.countdown = "ALIVE";
-            timer.sortTime = 0;
-        } else {
-            timer.isAlive = false;
-            timer.sortTime = timer.targetTime;
-            if (diff > DAY_IN_MS) {
-                const d = Math.floor(diff / DAY_IN_MS);
-                const h = Math.floor((diff % DAY_IN_MS) / HOUR_IN_MS);
-                const m = Math.floor((diff % HOUR_IN_MS) / 60000);
-                timer.countdown = `${d}d ${h}h ${m}m`;
-            } else {
-                const h = Math.floor(diff / HOUR_IN_MS);
-                const m = Math.floor((diff % HOUR_IN_MS) / 60000);
-                const s = Math.floor((diff % 60000) / 1000);
-                timer.countdown = `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
-            }
-        }
-    });
-
-    activeTimers.sort((a, b) => a.sortTime - b.sortTime);
-    panel.innerHTML = activeTimers.map(t => `
-        <div class="active-timer-card ${t.isAlive ? 'boss-alive' : ''}">
-            <h3>${t.name}</h3>
-            <span class="countdown-value">${t.countdown}</span>
-            ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearBoss('${t.id}')">Clear</button>` : ''}
-        </div>
-    `).join('');
+    const now = Date.now();
+    activeTimers.sort((a, b) => a.targetTime - b.targetTime);
+    panel.innerHTML = activeTimers.map(t => {
+        const diff = t.targetTime - now;
+        let countdown = diff < 0 ? "ALIVE" : formatTime(diff);
+        return `
+            <div class="active-timer-card ${diff < 0 ? 'boss-alive' : ''}">
+                <div class="timer-info">
+                    <h3>${t.name}</h3>
+                    <p>Next: ${new Date(t.targetTime).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                </div>
+                <div class="timer-countdown">
+                    <span class="countdown-value">${countdown}</span>
+                    ${(userRole === 'admin' && !t.isFixed) ? `<button class="clear-btn" onclick="clearTimer('${t.id}')">Clear</button>` : ''}
+                </div>
+            </div>`;
+    }).join('');
 }
 
-// Exponer funciones globales para los botones de la UI
-window.handleMarkDead = (id) => saveDeathTimeToDB(id, new Date().toISOString());
-window.clearBoss = (id) => clearTimerFromDB(id);
+function formatTime(ms) {
+    if (ms > DAY_IN_MS) {
+        const d = Math.floor(ms / DAY_IN_MS);
+        const h = Math.floor((ms % DAY_IN_MS) / HOUR_IN_MS);
+        const m = Math.floor((ms % HOUR_IN_MS) / 60000);
+        return `${d}d ${h}h ${m}m`;
+    }
+    const h = Math.floor(ms / HOUR_IN_MS);
+    const m = Math.floor((ms % HOUR_IN_MS) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+}
 
 function generateBossUI() {
-    container.innerHTML = '';
-    const sorted = [...BOSSES].sort((a, b) => a.level - b.level);
-    sorted.forEach(boss => {
-        const card = document.createElement('div');
-        card.className = 'boss-tracker';
-        card.innerHTML = `
+    const container = document.getElementById('bosses-container');
+    container.innerHTML = [...BOSSES].sort((a, b) => a.level - b.level).map(boss => `
+        <div class="boss-tracker" id="tracker-${boss.id}">
+            <img src="images/${boss.id}.png" class="boss-image" onerror="this.src='images/placeholder.png';">
             <div class="boss-info">
                 <h2>${boss.name}</h2>
-                <p>LVL ${boss.level} | ${boss.location}</p>
+                <div class="subtitle-group">
+                    <span class="boss-level">LVL ${boss.level}</span>
+                    <span class="location-text">${boss.location}</span>
+                </div>
+                <input type="datetime-local" id="time-input-${boss.id}" class="manual-time-input" style="display:none;">
             </div>
             <div class="action-column">
-                ${boss.fixedSchedule ? '<span class="fixed-badge">FIXED</span>' : `<button onclick="window.handleMarkDead('${boss.id}')">Mark Dead</button>`}
-            </div>`;
-        container.appendChild(card);
-    });
+                ${!boss.fixedSchedule ? `
+                    <div class="button-group">
+                        <button class="mark-dead-btn" onclick="handleMarkDead('${boss.id}')">Mark Dead</button>
+                        <button class="set-btn" onclick="openSetModal('${boss.id}')">Set</button>
+                    </div>` : '<span class="fixed-badge">FIXED</span>'}
+            </div>
+        </div>`).join('');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    generateBossUI();
-    setInterval(updateActivePanel, 1000);
-});
+window.filterBosses = () => {
+    const val = document.getElementById('search-boss').value.toLowerCase();
+    document.querySelectorAll('.boss-tracker').forEach(c => c.style.display = c.innerText.toLowerCase().includes(val) ? 'flex' : 'none');
+};
+document.getElementById('search-boss').addEventListener('keyup', filterBosses);
+
+setInterval(() => {
+    document.getElementById('local-time-display').textContent = "Local Time: " + new Date().toLocaleTimeString();
+    updateActivePanel();
+}, 1000);
+
+document.addEventListener('DOMContentLoaded', generateBossUI);
