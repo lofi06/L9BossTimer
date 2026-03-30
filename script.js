@@ -188,8 +188,7 @@ window.setManualTime = (id) => {
     } else {
         // Si ya es visible y tiene valor, guardamos
         if (input.value) {
-            const jstDate = new Date(new Date(input.value).toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-set(ref(db, 'bosses/' + id), { deathTime: jstDate.toISOString() });
+            set(ref(db, 'bosses/' + id), { deathTime: new Date(input.value).toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
