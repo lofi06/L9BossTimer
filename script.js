@@ -174,9 +174,6 @@ window.setManualTime = (id) => {
     } else {
         // Si ya es visible y tiene valor, guardamos
         if (input.value) {
-            const [datePart, timePart] = input.value.split("T");
-            const [year, month, day] = datePart.split("-").map(Number);
-            const [hour, minute] = timePart.split(":").map(Number);
             
             // Crear fecha como JST y convertir a UTC correctamente
             const [datePart, timePart] = input.value.split("T");
