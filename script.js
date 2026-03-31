@@ -153,41 +153,42 @@ onValue(ref(db, 'bosses'), (snapshot) => {
         });
     });
 
-    // --- Bosses por intervalo ---
-    if (data) {
-        for (let id in data) {
-            const boss = BOSSES.find(b => b.id === id);
-            if (boss && data[id].deathTime) {
-                const deathTime = Date.parse(data[id].deathTime);
-                const aliveDuration = getAliveDuration(boss.id);
-                const intervalMs = boss.interval * HOUR_IN_MS;
+    // Bosses por Intervalo
+if (data) {
+    for (let id in data) {
+        const boss = BOSSES.find(b => b.id === id);
+        if (!boss) continue;
 
-                // Calcular el próximo spawn después de la ventana ALIVE
-               let spawnTime = t.deathTime + aliveDuration;
-                if (now < spawnTime) {
-                    // Aún no apareció, timer hasta spawn
-                    targetTime = spawnTime;
-                } else if (now < spawnTime + aliveDuration) {
-                    // Dentro de la ventana ALIVE
-                    targetTime = spawnTime + aliveDuration; // Timer hasta que termine ALIVE
-                } else {
-                    // Después de ALIVE
-                    while (spawnTime < now) {
-                        spawnTime += intervalMs;
-                    }
-                    targetTime = spawnTime;
-                }
-                activeTimers.push({
-                    id: boss.id,
-                    name: boss.name,
-                    deathTime: deathTime,
-                    interval: boss.interval,
-                    isFixed: false,
-                    targetTime: spawnTime
-                });
+        const deathTime = data[id].deathTime ? Date.parse(data[id].deathTime) : null;
+        const aliveDuration = getAliveDuration(boss.id);
+        let intervalMs = boss.interval * HOUR_IN_MS;
+
+        let targetTime;
+        const now = getNow();
+
+        if (deathTime) {
+            let spawnTime = deathTime + aliveDuration;
+
+            // Avanzar ciclos si ya pasó ALIVE
+            while (spawnTime < now) {
+                spawnTime += intervalMs;
             }
+            targetTime = spawnTime;
+        } else {
+            // Si no hay deathTime, mostrar como inactivo, timer = 0
+            targetTime = now; 
         }
+
+        activeTimers.push({
+            id: boss.id,
+            name: boss.name,
+            deathTime: deathTime,
+            interval: boss.interval,
+            isFixed: false,
+            targetTime: targetTime
+        });
     }
+}
 
     renderActivePanel();
 });
