@@ -137,7 +137,39 @@ function formatTime(ms) {
     return `${String(totalHours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-// --- FIREBASE LOGIC CORREGIDO --- 
+// --- AUTO-DEATH TRACKING ---
+// Guarda los timeouts de auto-muerte para cancelarlos si el usuario interactúa
+const autoDeathTimeouts = {};
+
+function scheduleAutoDeath(bossId, spawnTime) {
+    // Cancelar cualquier auto-muerte previa pendiente para este boss
+    if (autoDeathTimeouts[bossId]) {
+        clearTimeout(autoDeathTimeouts[bossId]);
+        delete autoDeathTimeouts[bossId];
+    }
+
+    const boss = BOSSES.find(b => b.id === bossId);
+    if (!boss) return;
+
+    const aliveDuration = getAliveDuration(bossId);
+    // El auto-death ocurre cuando termina la ventana ALIVE (spawn + aliveDuration)
+    const autoDeathAt = spawnTime + aliveDuration;
+    const delay = autoDeathAt - getNow();
+
+    if (delay <= 0) {
+        // Ya pasó la ventana ALIVE, registrar muerte inmediatamente
+        set(ref(db, 'bosses/' + bossId), { deathTime: new Date(autoDeathAt).toISOString() });
+        return;
+    }
+
+    autoDeathTimeouts[bossId] = setTimeout(() => {
+        // Registrar la muerte en el momento exacto en que terminó la ventana ALIVE
+        set(ref(db, 'bosses/' + bossId), { deathTime: new Date(autoDeathAt).toISOString() });
+        delete autoDeathTimeouts[bossId];
+    }, delay);
+}
+
+// --- FIREBASE LOGIC --- 
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
     activeTimers = [];
@@ -161,21 +193,43 @@ onValue(ref(db, 'bosses'), (snapshot) => {
             if (boss && data[id].deathTime) {
                 const deathTime = Date.parse(data[id].deathTime);
                 const aliveDuration = getAliveDuration(boss.id);
+                const intervalMs = boss.interval * HOUR_IN_MS;
 
-                // Inicialmente el spawn es deathTime + aliveDuration + interval
-                let spawnTime = deathTime + aliveDuration + (boss.interval * HOUR_IN_MS);
+                // Primer spawn esperado tras la muerte registrada
+                let spawnTime = deathTime + aliveDuration + intervalMs;
 
-                // Avanzar ciclos si el spawn ya pasó
-                while (spawnTime < now) {
-                    spawnTime += (boss.interval * HOUR_IN_MS);
+                // Avanzar ciclos completos (spawn + alive + interval) hasta llegar al ciclo actual
+                // Un "ciclo" es: spawn → ALIVE window → siguiente countdown
+                while (spawnTime + aliveDuration + intervalMs < now) {
+                    spawnTime += intervalMs;
                 }
 
-                activeTimers.push({
-                    id: boss.id,
-                    name: boss.name,
-                    targetTime: spawnTime,
-                    isFixed: false
-                });
+                // CASO A: El boss aún no ha spawneado → countdown normal
+                if (spawnTime > now) {
+                    activeTimers.push({
+                        id: boss.id,
+                        name: boss.name,
+                        targetTime: spawnTime,
+                        isFixed: false,
+                        phase: 'countdown'
+                    });
+                }
+                // CASO B: El boss spawneó y está en ventana ALIVE
+                else if (spawnTime <= now && now < spawnTime + aliveDuration) {
+                    const aliveEndsAt = spawnTime + aliveDuration;
+                    activeTimers.push({
+                        id: boss.id,
+                        name: boss.name,
+                        targetTime: spawnTime,   // cuándo spawneó
+                        aliveEndsAt: aliveEndsAt, // cuándo termina el ALIVE
+                        isFixed: false,
+                        phase: 'alive'
+                    });
+                    // Programar auto-muerte al final de la ventana ALIVE
+                    scheduleAutoDeath(boss.id, spawnTime);
+                }
+                // CASO C: La ventana ALIVE ya terminó pero Firebase aún no actualizó
+                // (el setTimeout de scheduleAutoDeath se encargará, no agregamos timer)
             }
         }
     }
@@ -185,6 +239,11 @@ onValue(ref(db, 'bosses'), (snapshot) => {
 
 // ACCIONES
 window.markDead = (id) => {
+    // Cancelar auto-muerte pendiente si el usuario marcó manualmente
+    if (autoDeathTimeouts[id]) {
+        clearTimeout(autoDeathTimeouts[id]);
+        delete autoDeathTimeouts[id];
+    }
     set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 };
 
@@ -215,6 +274,12 @@ window.setManualTime = (id) => {
             // Crear fecha en UTC equivalente a JST
             const utcTime = Date.UTC(year, month - 1, day, hour - 9, minute);
             
+            // Cancelar auto-muerte pendiente si el usuario seteó manualmente
+            if (autoDeathTimeouts[id]) {
+                clearTimeout(autoDeathTimeouts[id]);
+                delete autoDeathTimeouts[id];
+            }
+
             // Guardar directamente
             set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString() });
             input.style.display = "none";
@@ -281,25 +346,49 @@ function renderActivePanel() {
     }
 
     panel.innerHTML = sorted.map(t => {
+        const isAlive = t.phase === 'alive';
         const diff = t.targetTime - now;
-        const isUrgent = diff < 300000 && diff > 0;
+        
+        let countdownHtml = '';
+        let spawnLabel = '';
+        let cardClass = '';
+
+        if (isAlive) {
+            // Mostrar tiempo restante de ventana ALIVE
+            const aliveRemaining = t.aliveEndsAt - now;
+            const aliveSeconds = Math.max(0, Math.ceil(aliveRemaining / 1000));
+            const aliveMin = String(Math.floor(aliveSeconds / 60)).padStart(2, '0');
+            const aliveSec = String(aliveSeconds % 60).padStart(2, '0');
+
+            cardClass = 'boss-alive';
+            spawnLabel = `Auto-death in: ${aliveMin}:${aliveSec}`;
+            countdownHtml = `<span class="countdown-value alive-blink" style="color:#ff9900;">ALIVE</span>`;
+        } else {
+            const isUrgent = diff < 300000 && diff > 0;
+            cardClass = isUrgent ? 'boss-imminent' : '';
+            spawnLabel = `Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
+                timeZone: 'Asia/Tokyo',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            })}`;
+            countdownHtml = `
+                <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:#4CAF50;">
+                    ${formatTime(diff)}
+                </span>
+            `;
+        }
+
         return `
-            <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
+            <div class="active-timer-card ${cardClass}">
                 <div class="timer-info">
                     <h3>${t.name}</h3>
-                    <p>Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
-                        timeZone: 'Asia/Tokyo',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    })}</p>
+                    <p>${spawnLabel}</p>
                 </div>
                 <div class="timer-values" style="text-align:right">
-                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
-                        ${diff < 0 ? 'ALIVE' : formatTime(diff)}
-                    </span>
+                    ${countdownHtml}
                     ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
                 </div>
             </div>
