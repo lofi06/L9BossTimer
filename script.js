@@ -138,10 +138,12 @@ function formatTime(ms) {
     return `${String(totalHours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-// --- NOTIFICACIONES DEL NAVEGADOR ---
-// Set con los IDs de bosses que ya recibieron notificación en este ciclo
-// Se limpia cuando el boss spawna o cuando se registra nueva muerte
-const notifiedBosses = new Set();
+// --- NOTIFICACIONES (NAVEGADOR + DISCORD) ---
+const CLOUDFLARE_WORKER = 'https://lordnine-discord.lofialter.workers.dev/';
+
+// Sets para evitar notificaciones duplicadas por evento y ciclo
+const notifiedWarning = new Set();  // Avisó "5 min antes"
+const notifiedAlive   = new Set();  // Avisó "spawneó"
 
 function requestNotificationPermission() {
     if (!('Notification' in window)) return;
@@ -150,41 +152,128 @@ function requestNotificationPermission() {
     }
 }
 
-function notifyBoss(boss, minutesLeft) {
+// --- Envío a Discord vía Cloudflare Worker ---
+function sendDiscord(embed) {
+    fetch(CLOUDFLARE_WORKER, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ embeds: [embed] })
+    }).catch(() => {}); // Silenciar errores de red para no romper el tracker
+}
+
+// --- Notificación del navegador ---
+function browserNotify(title, body, tag) {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
-    if (notifiedBosses.has(boss.id)) return; // Ya notificado en este ciclo
+    new Notification(title, { body, tag, silent: false });
+}
 
-    notifiedBosses.add(boss.id);
+// --- 5 minutos antes del spawn ---
+function notifyWarning(boss, spawnTime) {
+    if (notifiedWarning.has(boss.id)) return;
+    notifiedWarning.add(boss.id);
 
-    const spawnTime = activeTimers.find(t => t.id === boss.id)?.targetTime;
-    const spawnJST = spawnTime ? new Date(spawnTime).toLocaleTimeString('en-US', {
-        timeZone: 'Asia/Tokyo',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    }) : '';
+    const spawnJST = new Date(spawnTime).toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true
+    });
 
-    new Notification(`⚔️ ${boss.name} spawns in ${minutesLeft} min!`, {
-        body: `📍 ${boss.location}\n🕐 ${spawnJST} (JST)`,
-        icon: `images/${boss.id}.png`,
-        tag: boss.id, // Evita duplicados si ya hay una notif del mismo boss
-        silent: false
+    // Navegador
+    browserNotify(
+        `⏰ ${boss.name} spawns in 5 min!`,
+        `📍 ${boss.location}\n🕐 ${spawnJST} (JST)`,
+        `warn-${boss.id}`
+    );
+
+    // Discord
+    sendDiscord({
+        title: `⏰ ${boss.name} — 5 minutes to spawn!`,
+        color: 0xd4af37,
+        fields: [
+            { name: '📍 Location', value: boss.location, inline: true },
+            { name: '🕐 Spawn Time (JST)', value: spawnJST, inline: true },
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
+        ],
+        footer: { text: 'LordNine Boss Tracker' }
     });
 }
 
+// --- Boss spawneó (entró en ventana ALIVE) ---
+function notifySpawned(boss, spawnTime) {
+    if (notifiedAlive.has(boss.id)) return;
+    notifiedAlive.add(boss.id);
+
+    const spawnJST = new Date(spawnTime).toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true
+    });
+
+    // Navegador
+    browserNotify(
+        `✅ ${boss.name} has spawned!`,
+        `📍 ${boss.location}\n🕐 ${spawnJST} (JST)`,
+        `alive-${boss.id}`
+    );
+
+    // Discord
+    sendDiscord({
+        title: `✅ ${boss.name} — SPAWNED!`,
+        color: 0x2ecc71,
+        fields: [
+            { name: '📍 Location', value: boss.location, inline: true },
+            { name: '🕐 Spawn Time (JST)', value: spawnJST, inline: true },
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
+        ],
+        footer: { text: 'LordNine Boss Tracker' }
+    });
+}
+
+// --- Boss marcado como muerto manualmente ---
+function notifyDead(bossId) {
+    const boss = BOSSES.find(b => b.id === bossId);
+    if (!boss) return;
+
+    const nowJST = new Date().toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true
+    });
+
+    // Navegador
+    browserNotify(
+        `💀 ${boss.name} was killed!`,
+        `📍 ${boss.location}\n🕐 ${nowJST} (JST)`,
+        `dead-${boss.id}`
+    );
+
+    // Discord
+    sendDiscord({
+        title: `💀 ${boss.name} — KILLED`,
+        color: 0xc0392b,
+        fields: [
+            { name: '📍 Location', value: boss.location, inline: true },
+            { name: '🕐 Killed at (JST)', value: nowJST, inline: true },
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
+        ],
+        footer: { text: 'LordNine Boss Tracker' }
+    });
+}
+
+// --- Revisión cada segundo ---
 function checkSpawnNotifications() {
-    if (Notification.permission !== 'granted') return;
     const now = getNow();
-    const NOTIFY_MS = 5 * 60 * 1000; // 5 minutos en ms
-    const WINDOW_MS = 10 * 1000;     // Ventana de detección: 10 segundos (evita perderse el tick exacto)
+    const NOTIFY_MS = 5 * 60 * 1000;
+    const WINDOW_MS = 10 * 1000;
 
     activeTimers.forEach(t => {
-        if (t.phase === 'alive') return; // Ya spawneó, no notificar
-        const diff = t.targetTime - now;
-        if (diff > 0 && diff <= NOTIFY_MS + WINDOW_MS && diff > NOTIFY_MS - WINDOW_MS) {
-            const boss = BOSSES.find(b => b.id === t.id);
-            if (boss) notifyBoss(boss, 5);
+        const boss = BOSSES.find(b => b.id === t.id);
+        if (!boss) return;
+
+        if (t.phase === 'alive') {
+            // Boss spawneó → notificar una sola vez
+            notifySpawned(boss, t.targetTime);
+        } else {
+            // Revisar si está a 5 minutos
+            const diff = t.targetTime - now;
+            if (diff > 0 && diff <= NOTIFY_MS + WINDOW_MS && diff > NOTIFY_MS - WINDOW_MS) {
+                notifyWarning(boss, t.targetTime);
+            }
         }
     });
 }
@@ -297,8 +386,11 @@ window.markDead = (id) => {
         clearTimeout(autoDeathTimeouts[id]);
         delete autoDeathTimeouts[id];
     }
-    // Limpiar notificación previa para que avise en el próximo ciclo
-    notifiedBosses.delete(id);
+    // Notificar muerte manual
+    notifyDead(id);
+    // Limpiar sets para que el próximo ciclo vuelva a notificar
+    notifiedWarning.delete(id);
+    notifiedAlive.delete(id);
     set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 };
 
@@ -334,8 +426,9 @@ window.setManualTime = (id) => {
                 clearTimeout(autoDeathTimeouts[id]);
                 delete autoDeathTimeouts[id];
             }
-            // Limpiar notificación previa para que avise en el próximo ciclo
-            notifiedBosses.delete(id);
+            // Limpiar sets para que el próximo ciclo vuelva a notificar
+            notifiedWarning.delete(id);
+            notifiedAlive.delete(id);
 
             // isManual: true → el spawn siguiente NO suma aliveDuration
             set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString(), isManual: true });
@@ -427,7 +520,7 @@ function renderActivePanel() {
 
             cardClass = 'boss-alive';
             spawnLabel = `Auto-death in: ${aliveMin}:${aliveSec}`;
-            countdownHtml = `<span class="countdown-value alive-blink" style="color:#ff9900;">ALIVE</span>`;
+            countdownHtml = `<span class="countdown-value alive-blink" style="color:#2ecc71;">ALIVE</span>`;
         } else {
             const isUrgent = diff < 300000 && diff > 0;
             cardClass = isUrgent ? 'boss-imminent' : '';
