@@ -164,7 +164,13 @@ onValue(ref(db, 'bosses'), (snapshot) => {
                 }
                 
                 const target = spawnTime;
-                activeTimers.push({ id: boss.id, name: boss.name, targetTime: target, isFixed: false });
+                activeTimers.push({
+                    id: boss.id,
+                    name: boss.name,
+                    deathTime: deathTime,
+                    interval: boss.interval,
+                    isFixed: false
+                });
             }
         }
     }
@@ -269,8 +275,35 @@ function renderActivePanel() {
     }
 
     panel.innerHTML = sorted.map(t => {
-        const diff = t.targetTime - now;
-        const isUrgent = diff < 300000 && diff > 0;
+        let targetTime;
+
+if (t.isFixed) {
+    targetTime = t.targetTime;
+} else {
+    const aliveDuration = getAliveDuration(t.id);
+    const intervalMs = t.interval * HOUR_IN_MS;
+
+        let spawnTime = t.deathTime + intervalMs;
+    
+        // avanzar ciclos correctamente
+        while (spawnTime + aliveDuration < now) {
+            spawnTime += intervalMs;
+        }
+    
+        // si está en ventana ALIVE
+        if (now >= spawnTime && now <= spawnTime + aliveDuration) {
+            targetTime = spawnTime;
+        } else if (now > spawnTime + aliveDuration) {
+            // siguiente ciclo después del ALIVE
+            const cycles = Math.floor((now - (spawnTime + aliveDuration)) / intervalMs);
+            targetTime = spawnTime + aliveDuration + (cycles + 1) * intervalMs;
+        } else {
+            targetTime = spawnTime;
+        }
+    }
+    
+    const diff = targetTime - now;
+    const isUrgent = diff < 300000 && diff > 0;
         return `
             <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
                 <div class="timer-info">
