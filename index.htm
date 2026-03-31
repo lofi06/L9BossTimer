@@ -9,6 +9,50 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
+
+    <!-- ═══════════════════════════════════════════════════════
+         PANTALLA DE BIENVENIDA
+         Se muestra antes del tracker. El usuario elige entre
+         USER (sin contraseña) o ADMIN (requiere PIN de 4 dígitos).
+         Se oculta con display:none cuando el modo es confirmado.
+    ═══════════════════════════════════════════════════════ -->
+    <div id="welcome-screen">
+        <div class="welcome-box">
+            <img src="favicon.png" class="welcome-logo" alt="LordNine Logo">
+            <h1 class="welcome-title">LORDNINE BOSS TRACKER</h1>
+            <p class="welcome-subtitle">Select your access mode</p>
+
+            <div class="welcome-buttons">
+                <button class="welcome-btn user-btn" onclick="enterAsUser()">
+                    <span class="btn-icon">👤</span>
+                    <span class="btn-label">USER</span>
+                    <span class="btn-desc">View timers</span>
+                </button>
+                <button class="welcome-btn admin-btn" onclick="showAdminPin()">
+                    <span class="btn-icon">🔐</span>
+                    <span class="btn-label">ADMIN</span>
+                    <span class="btn-desc">Full control</span>
+                </button>
+            </div>
+
+            <!-- PIN de Admin (oculto hasta que se seleccione ADMIN) -->
+            <div id="pin-section" style="display:none;">
+                <p class="pin-label">Enter Admin PIN</p>
+                <div class="pin-inputs">
+                    <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+                </div>
+                <p id="pin-error" class="pin-error" style="display:none;">Incorrect PIN. Try again.</p>
+            </div>
+
+            <p class="welcome-credit">Developed by <span>LOFI</span></p>
+        </div>
+    </div>
+
+    <!-- TRACKER PRINCIPAL (oculto hasta elegir modo) -->
+    <div id="tracker" style="display:none;">
     <header>
         <div class="logo-text">
             <h1>LORDNINE BOSS SPAWN TRACKER</h1>
@@ -38,6 +82,8 @@
             </div>
         </div>
     </div>
+
+    </div><!-- /#tracker -->
 
     <script type="module" src="script.js"></script>
 </body>
