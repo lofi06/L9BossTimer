@@ -123,10 +123,10 @@ header {
     background: rgba(192, 57, 43, 0.05);
 }
 
-/* Timer en ventana ALIVE → naranja ardiente */
+/* Timer en ventana ALIVE → verde activo */
 .boss-row-alive {
-    border-left-color: #ff9900;
-    background: rgba(255, 153, 0, 0.07);
+    border-left-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.06);
 }
 
 .boss-image { 
@@ -282,13 +282,16 @@ header {
 }
 
 .guild-tag {
-    font-size: 0.85em; 
-    color: #d4af37; 
-    border: 1px solid #d4af37;
-    padding: 6px 25px; 
-    background: rgba(212, 175, 55, 0.05); 
+    font-size: 0.75em;
+    color: #8b949e;
     letter-spacing: 2px;
-    margin-bottom: 5px; /* Separación del borde inferior */
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.guild-tag span {
+    color: #d4af37;
+    font-weight: 700;
 }
 
 /* Scrollbar personalizada */
@@ -305,8 +308,8 @@ header {
 }
 
 .boss-alive {
-    border-left-color: #ff9900;
-    background: rgba(255, 153, 0, 0.08);
+    border-left-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.07);
 }
 
 @keyframes alivePulse {
