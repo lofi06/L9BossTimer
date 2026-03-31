@@ -265,18 +265,16 @@ function requestNotificationPermission() {
     }
 }
 
-// Envío a Discord vía Cloudflare Worker
-// content: '@everyone' tagea a todos en el canal
-// embed.thumbnail: imagen del boss a la derecha del embed
+// sendDiscord — activo SOLO para eventos manuales (DEAD y SET).
+// Las notificaciones automáticas (5 min antes y ALIVE) las maneja
+// el cron Worker lordnine-cron 24/7, sin necesidad de tener la página abierta.
+// Así no hay duplicados: cron = automático, página = acciones manuales.
 function sendDiscord(embed) {
     fetch(CLOUDFLARE_WORKER, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            content: '@everyone',
-            embeds: [embed]
-        })
-    }).catch(() => {}); // Silenciar errores de red para no romper el tracker
+        body: JSON.stringify({ content: '@everyone', embeds: [embed] })
+    }).catch(() => {});
 }
 
 // --- Notificación del navegador ---
@@ -301,18 +299,7 @@ function notifyWarning(boss, spawnTime) {
         `warn-${boss.id}`
     );
 
-    // Mensaje a Discord — incluye imagen del boss y @everyone
-    sendDiscord({
-        title: `⏰ ${boss.name} — 5 minutes to spawn!`,
-        color: 0xd4af37,
-        thumbnail: { url: `${BASE_URL}${boss.id}.png` },
-        fields: [
-            { name: '📍 Location', value: boss.location, inline: true },
-            { name: '⚔️ Level', value: `${boss.level}`, inline: true },
-            { name: '🕐 Spawn Time (UTC+9)', value: spawnJST, inline: false }
-        ],
-        footer: { text: 'LordNine Boss Tracker' }
-    });
+    // Discord lo maneja el cron Worker (lordnine-cron) — sin duplicados
 }
 
 // Notificación de spawn: el boss acaba de aparecer (entró en ventana ALIVE)
@@ -328,17 +315,7 @@ function notifySpawned(boss, spawnTime) {
         `alive-${boss.id}`
     );
 
-    // Mensaje a Discord — solo ubicación y nivel, sin hora (ya spawneó)
-    sendDiscord({
-        title: `✅ ${boss.name} — SPAWNED!`,
-        color: 0x2ecc71,
-        thumbnail: { url: `${BASE_URL}${boss.id}.png` },
-        fields: [
-            { name: '📍 Location', value: boss.location, inline: true },
-            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
-        ],
-        footer: { text: 'LordNine Boss Tracker' }
-    });
+    // Discord lo maneja el cron Worker (lordnine-cron) — sin duplicados
 }
 
 // Notificación de muerte manual: alguien presionó el botón DEAD
@@ -348,18 +325,17 @@ function notifyDead(bossId) {
     const boss = BOSSES.find(b => b.id === bossId);
     if (!boss) return;
 
-    // Calcular próximo respawn basado en la hora actual + intervalo
     const nextRespawn = Date.now() + (boss.interval * HOUR_IN_MS);
     const nextRespawnJST = formatJST(nextRespawn);
 
-    // Notificación del navegador (popup del sistema)
+    // Popup del navegador
     browserNotify(
         `💀 ${boss.name} was killed!`,
         `📍 ${boss.location}\n🔄 Respawn: ${nextRespawnJST} (UTC+9)`,
         `dead-${boss.id}`
     );
 
-    // Mensaje a Discord — muestra próximo respawn en lugar de hora de muerte
+    // Discord — viene desde la página porque es acción manual
     sendDiscord({
         title: `💀 ${boss.name} — KILLED`,
         color: 0xc0392b,
@@ -368,6 +344,35 @@ function notifyDead(bossId) {
             { name: '📍 Location', value: boss.location, inline: true },
             { name: '⚔️ Level', value: `${boss.level}`, inline: true },
             { name: '🔄 Next Respawn (UTC+9)', value: nextRespawnJST, inline: false }
+        ],
+        footer: { text: 'LordNine Boss Tracker' }
+    });
+}
+
+// Notificación de tiempo seteado manualmente: alguien usó el botón SET
+// Muestra el tiempo en que va a spawnear según lo que ingresó el usuario
+function notifyManualSet(bossId, spawnTimeUTC) {
+    const boss = BOSSES.find(b => b.id === bossId);
+    if (!boss) return;
+
+    const spawnJST = formatJST(spawnTimeUTC);
+
+    // Popup del navegador
+    browserNotify(
+        `🕐 ${boss.name} — Spawn time set`,
+        `📍 ${boss.location}\n🔄 Spawn: ${spawnJST} (UTC+9)`,
+        `set-${boss.id}`
+    );
+
+    // Discord — viene desde la página porque es acción manual
+    sendDiscord({
+        title: `🕐 ${boss.name} — Manual Spawn Set`,
+        color: 0x4a9eff,
+        thumbnail: { url: `${BASE_URL}${boss.id}.png` },
+        fields: [
+            { name: '📍 Location', value: boss.location, inline: true },
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true },
+            { name: '🔄 Expected Spawn (UTC+9)', value: spawnJST, inline: false }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
@@ -576,8 +581,12 @@ window.setManualTime = (id) => {
             notifiedWarning.delete(id);
             notifiedAlive.delete(id);
 
-            // isManual: true → el spawn siguiente NO suma aliveDuration
-            set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString(), isManual: true });
+            // Calcular cuándo spawneará = tiempo ingresado (muerte manual) + intervalo
+            const boss = BOSSES.find(b => b.id === id);
+            const spawnTimeUTC = utcTime + (boss ? boss.interval * HOUR_IN_MS : 0);
+            notifyManualSet(id, spawnTimeUTC);
+
+            set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
