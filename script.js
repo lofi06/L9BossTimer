@@ -297,6 +297,13 @@ window.clearTimer = (id) => {
 };
 
 // --- RENDERIZADO ---
+function getBossRowClass(bossId) {
+    const timer = activeTimers.find(t => t.id === bossId);
+    if (!timer) return 'boss-row-inactive';
+    if (timer.phase === 'alive') return 'boss-row-alive';
+    return 'boss-row-active';
+}
+
 function renderBossList(filter = "") {
     const container = document.getElementById('bosses-container');
     container.innerHTML = BOSSES
@@ -310,9 +317,10 @@ function renderBossList(filter = "") {
                     `${days[s.day]} ${String(s.hour).padStart(2,'0')}:${String(s.minute).padStart(2,'0')}`
                 ).join(" | ");
             }
+            const rowClass = getBossRowClass(b.id);
 
             return `
-            <div class="boss-tracker">
+            <div class="boss-tracker ${rowClass}" data-id="${b.id}">
                 <img src="images/${b.id}.png" class="boss-image" onerror="this.src='https://via.placeholder.com/50/161b22/d4af37?text=B';">
                 <div class="boss-info">
                     <h2>${b.name.toUpperCase()}</h2>
@@ -399,6 +407,18 @@ function renderActivePanel() {
     }).join('');
 }
 
+// Actualiza SOLO las clases de borde de cada fila sin reconstruir el DOM
+function updateBossRowClasses() {
+    BOSSES.forEach(b => {
+        const row = document.querySelector(`.boss-tracker[data-id="${b.id}"]`);
+        if (!row) return;
+        const newClass = getBossRowClass(b.id);
+        // Solo tocar el DOM si cambió la clase
+        ['boss-row-inactive', 'boss-row-active', 'boss-row-alive'].forEach(c => row.classList.remove(c));
+        row.classList.add(newClass);
+    });
+}
+
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     renderBossList();
@@ -408,8 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
     timeZone: 'Asia/Tokyo',
     hour12: false
 });
-        // Recalcular fases cada segundo para detectar countdown → alive sin esperar Firebase
+        // Recalcular fases y actualizar bordes sin reconstruir el DOM completo
         recomputeActiveTimers();
+        updateBossRowClasses();
         renderActivePanel();
     }, 1000);
 });
