@@ -141,70 +141,46 @@ function formatTime(ms) {
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
     activeTimers = [];
-    const now = getNow();
 
-    // --- Bosses con horario fijo ---
+    // Bosses Fijos
     BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
-        activeTimers.push({ 
-            id: boss.id, 
-            name: boss.name, 
-            targetTime: calculateNextFixedTarget(boss), 
-            isFixed: true 
-        });
+        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
     });
 
     // Bosses por Intervalo
-if (data) {
-    for (let id in data) {
-        const boss = BOSSES.find(b => b.id === id);
-        if (!boss) continue;
-
-        const deathTime = data[id].deathTime ? Date.parse(data[id].deathTime) : null;
-        const aliveDuration = getAliveDuration(boss.id);
-        let intervalMs = boss.interval * HOUR_IN_MS;
-
-        let targetTime;
-        const now = getNow();
-
-        if (deathTime) {
-            let spawnTime = deathTime + aliveDuration;
-
-            // Avanzar ciclos si ya pasó ALIVE
-            while (spawnTime < now) {
-                spawnTime += intervalMs;
+    if (data) {
+        for (let id in data) {
+            const boss = BOSSES.find(b => b.id === id);
+            if (boss && data[id].deathTime) {
+                const deathTime = Date.parse(data[id].deathTime);
+                const now = getNow();
+                const aliveDuration = getAliveDuration(boss.id);
+                
+                let spawnTime = deathTime + (boss.interval * HOUR_IN_MS);
+                
+                // Avanzar ciclos respetando ventana ALIVE
+                while (spawnTime + aliveDuration < now) {
+                    spawnTime += (boss.interval * HOUR_IN_MS);
+                }
+                
+                const target = spawnTime;
+                activeTimers.push({ id: boss.id, name: boss.name, targetTime: target, isFixed: false });
             }
-            targetTime = spawnTime;
-        } else {
-            // Si no hay deathTime, mostrar como inactivo, timer = 0
-            targetTime = now; 
         }
-
-        activeTimers.push({
-            id: boss.id,
-            name: boss.name,
-            deathTime: deathTime,
-            interval: boss.interval,
-            isFixed: false,
-            targetTime: targetTime
-        });
     }
-}
-
     renderActivePanel();
 });
 
 // ACCIONES
 window.markDead = (id) => {
-    const now = new Date();
-    const deathTimeISO = now.toISOString(); // Se guarda como UTC directo
-    set(ref(db, 'bosses/' + id), { deathTime: deathTimeISO });
+    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 };
 
 window.setManualTime = (id) => {
     const input = document.getElementById(`time-input-${id}`);
     
+    // Si está oculto, lo mostramos y cargamos la hora de Japón actual
     if (input.style.display === "none") {
-        // Mostrar input y cargar hora actual JST
         const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
         const year = nowJST.getFullYear();
         const month = String(nowJST.getMonth() + 1).padStart(2, '0');
@@ -216,17 +192,19 @@ window.setManualTime = (id) => {
         input.style.display = "block";
         input.focus();
     } else {
+        // Si ya es visible y tiene valor, guardamos
         if (input.value) {
-            // Leer input y convertir a UTC correcto
+            
+            // Crear fecha como JST y convertir a UTC correctamente
             const [datePart, timePart] = input.value.split("T");
             const [year, month, day] = datePart.split("-").map(Number);
             const [hour, minute] = timePart.split(":").map(Number);
             
-            // Crear fecha local, luego restar 9h para obtener UTC
-            const localDate = new Date(year, month - 1, day, hour, minute);
-            const deathTimeISO = new Date(localDate.getTime() - (9*60*60*1000)).toISOString();
+            // Crear fecha en UTC equivalente a JST
+            const utcTime = Date.UTC(year, month - 1, day, hour - 9, minute);
             
-            set(ref(db, 'bosses/' + id), { deathTime: deathTimeISO });
+            // Guardar directamente
+            set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString() });
             input.style.display = "none";
         } else {
             input.style.display = "none";
@@ -280,57 +258,39 @@ function renderBossList(filter = "") {
 function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = getNow();
+    
+    const map = new Map();
+    activeTimers.forEach(t => map.set(t.id, t));
+    const sorted = Array.from(map.values()).sort((a, b) => a.targetTime - b.targetTime);
 
-    if (activeTimers.length === 0) {
+    if (sorted.length === 0) {
         panel.innerHTML = '<p class="no-timers">No active timers.</p>';
         return;
     }
 
-    const sortedTimers = activeTimers.map(t => {
-        if (t.isFixed) {
-            // Boss fijo ya tiene targetTime calculado
-        } else {
-            const intervalMs = t.interval * HOUR_IN_MS;
-            const aliveDuration = getAliveDuration(t.id);
-            let spawnTime;
-
-            if (t.deathTime) {
-                // Calcular spawn real sumando ALIVE y ciclos de intervalo
-                spawnTime = t.deathTime + aliveDuration;
-                while (spawnTime < now) spawnTime += intervalMs;
-            } else {
-                // Si no hay deathTime, iniciar timer desde ahora + interval
-                spawnTime = now + intervalMs;
-            }
-
-            t.targetTime = spawnTime;
-        }
-        return t;
-    }).sort((a, b) => a.targetTime - b.targetTime);
-
-    panel.innerHTML = sortedTimers.map(t => {
+    panel.innerHTML = sorted.map(t => {
         const diff = t.targetTime - now;
-        const isUrgent = diff < 300000 && diff > 0; // menos de 5min
+        const isUrgent = diff < 300000 && diff > 0;
         return `
-        <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
-            <div class="timer-info">
-                <h3>${t.name}</h3>
-                <p>Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', { 
-                    timeZone: 'Asia/Tokyo', 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: 'numeric', 
-                    minute: '2-digit', 
-                    hour12: true 
-                })}</p>
+            <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
+                <div class="timer-info">
+                    <h3>${t.name}</h3>
+                    <p>Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
+                        timeZone: 'Asia/Tokyo',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    })}</p>
+                </div>
+                <div class="timer-values" style="text-align:right">
+                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
+                        ${diff < 0 ? 'ALIVE' : formatTime(diff)}
+                    </span>
+                    ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
+                </div>
             </div>
-            <div class="timer-values" style="text-align:right">
-                <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
-                    ${diff < 0 ? 'ALIVE' : formatTime(diff)}
-                </span>
-                ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
-            </div>
-        </div>
         `;
     }).join('');
 }
