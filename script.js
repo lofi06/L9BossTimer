@@ -282,26 +282,20 @@ if (t.isFixed) {
 } else {
     const aliveDuration = getAliveDuration(t.id);
     const intervalMs = t.interval * HOUR_IN_MS;
-
-        let spawnTime = t.deathTime + intervalMs;
-    
-        // avanzar ciclos correctamente
-        while (spawnTime + aliveDuration < now) {
-            spawnTime += intervalMs;
-        }
-    
-        // si está en ventana ALIVE
-        if (now >= spawnTime && now <= spawnTime + aliveDuration) {
-            targetTime = spawnTime;
-        } else if (now > spawnTime + aliveDuration) {
-            // siguiente ciclo después del ALIVE
-            const cycles = Math.floor((now - (spawnTime + aliveDuration)) / intervalMs);
-            targetTime = spawnTime + aliveDuration + (cycles + 1) * intervalMs;
-        } else {
-            targetTime = spawnTime;
-        }
-    }
-    
+        let targetTime;
+            if (t.isFixed) {
+                targetTime = t.targetTime;
+            } else {
+                const aliveDuration = getAliveDuration(t.id);
+                const intervalMs = t.interval * HOUR_IN_MS;
+                // spawnTime = deathTime + aliveDuration
+                let spawnTime = t.deathTime + aliveDuration;
+                // Si ya pasó la ventana ALIVE y estamos después
+                while (spawnTime < now) {
+                    spawnTime += intervalMs;
+                }
+                targetTime = spawnTime;
+            }
     const diff = targetTime - now;
     const isUrgent = diff < 300000 && diff > 0;
         return `
