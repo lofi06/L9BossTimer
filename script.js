@@ -265,18 +265,12 @@ function requestNotificationPermission() {
     }
 }
 
-// Envío a Discord vía Cloudflare Worker
-// content: '@everyone' tagea a todos en el canal
-// embed.thumbnail: imagen del boss a la derecha del embed
+// sendDiscord está deshabilitado desde el navegador.
+// El Worker lordnine-cron (Cloudflare) se encarga de las notificaciones
+// de Discord 24/7 leyendo Firebase directamente cada minuto.
+// Dejar esta función vacía evita duplicados cuando la página está abierta.
 function sendDiscord(embed) {
-    fetch(CLOUDFLARE_WORKER, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            content: '@everyone',
-            embeds: [embed]
-        })
-    }).catch(() => {}); // Silenciar errores de red para no romper el tracker
+    // Intencionalemente vacío — las notificaciones las maneja el cron Worker
 }
 
 // --- Notificación del navegador ---
