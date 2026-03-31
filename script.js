@@ -280,53 +280,62 @@ function renderBossList(filter = "") {
 function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = getNow();
-    
-    const map = new Map();
-    activeTimers.forEach(t => map.set(t.id, t));
-    const sorted = Array.from(map.values()).sort((a, b) => {
-        // Asegurarnos de calcular targetTime antes de ordenar
-        if (!a.targetTime && !a.isFixed && a.deathTime) {
-            const aliveDuration = getAliveDuration(a.id);
-            const intervalMs = a.interval * HOUR_IN_MS;
-            let spawnTime = a.deathTime + aliveDuration;
-            while (spawnTime < now) spawnTime += intervalMs;
-            a.targetTime = spawnTime;
-        }
-        if (!b.targetTime && !b.isFixed && b.deathTime) {
-            const aliveDuration = getAliveDuration(b.id);
-            const intervalMs = b.interval * HOUR_IN_MS;
-            let spawnTime = b.deathTime + aliveDuration;
-            while (spawnTime < now) spawnTime += intervalMs;
-            b.targetTime = spawnTime;
-        }
-        return (a.targetTime || 0) - (b.targetTime || 0);
-    });
 
-    if (sorted.length === 0) {
+    if (activeTimers.length === 0) {
         panel.innerHTML = '<p class="no-timers">No active timers.</p>';
         return;
     }
 
-    panel.innerHTML = sorted.map(t => {
-        let targetTime = t.isFixed ? t.targetTime : t.targetTime || now;
-        const diff = targetTime - now;
+    // Calcular targetTime correctamente para cada boss
+    const sortedTimers = activeTimers.map(t => {
+        if (t.isFixed) {
+            t.targetTime = t.targetTime; // ya calculado
+        } else if (t.deathTime) {
+            const aliveDuration = getAliveDuration(t.id);
+            const intervalMs = t.interval * HOUR_IN_MS;
+            let spawnTime = t.deathTime + aliveDuration; // ventana ALIVE
+
+            // avanzar ciclos completos hasta el siguiente spawn después de "now"
+            while (spawnTime < now) spawnTime += intervalMs;
+
+            t.targetTime = spawnTime;
+        }
+        return t;
+    }).sort((a, b) => (a.targetTime || 0) - (b.targetTime || 0));
+
+    panel.innerHTML = sortedTimers.map(t => {
+        const diff = t.targetTime - now;
         const isUrgent = diff < 300000 && diff > 0;
+
+        let nextSpawnText;
+        if (t.isFixed) {
+            nextSpawnText = new Date(t.targetTime).toLocaleString('en-US', {
+                timeZone: 'Asia/Tokyo',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        } else {
+            nextSpawnText = new Date(t.targetTime).toLocaleString('en-US', {
+                timeZone: 'Asia/Tokyo',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
 
         return `
             <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
                 <div class="timer-info">
                     <h3>${t.name}</h3>
-                    <p>Next Spawn: ${t.isFixed ? new Date(t.targetTime).toLocaleString('en-US', {
-                        timeZone: 'Asia/Tokyo',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    }) : 'Manual / Interval-based'}</p>
+                    <p>Next Spawn: ${diff <= 0 ? 'ALIVE' : nextSpawnText}</p>
                 </div>
                 <div class="timer-values" style="text-align:right">
-                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#4CAF50' : '#4CAF50'}">
+                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff <= 0 ? '#4CAF50' : '#4CAF50'}">
                         ${diff <= 0 ? 'ALIVE' : formatTime(diff)}
                     </span>
                     ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
