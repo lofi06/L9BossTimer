@@ -163,11 +163,20 @@ onValue(ref(db, 'bosses'), (snapshot) => {
                 const intervalMs = boss.interval * HOUR_IN_MS;
 
                 // Calcular el próximo spawn después de la ventana ALIVE
-                let spawnTime = deathTime + aliveDuration;
-                while (spawnTime < now) {
-                    spawnTime += intervalMs;
+               let spawnTime = t.deathTime + aliveDuration;
+                if (now < spawnTime) {
+                    // Aún no apareció, timer hasta spawn
+                    targetTime = spawnTime;
+                } else if (now < spawnTime + aliveDuration) {
+                    // Dentro de la ventana ALIVE
+                    targetTime = spawnTime + aliveDuration; // Timer hasta que termine ALIVE
+                } else {
+                    // Después de ALIVE
+                    while (spawnTime < now) {
+                        spawnTime += intervalMs;
+                    }
+                    targetTime = spawnTime;
                 }
-
                 activeTimers.push({
                     id: boss.id,
                     name: boss.name,
@@ -229,6 +238,7 @@ window.setManualTime = (id) => {
             // Guardar deathTime como "hora indicada - ALIVE duration"
             const deathTime = jstTime.getTime() - aliveDuration;
 
+            // Guardar en Firebase en UTC correctamente
             set(ref(db, 'bosses/' + id), { deathTime: new Date(deathTime).toISOString() });
             input.style.display = "none";
         } else {
