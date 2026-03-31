@@ -41,6 +41,11 @@ function launchTracker(role) {
     badge.className = `role-badge ${role}`;
     badge.textContent = role === 'admin' ? '🔐 ADMIN' : '👤 USER';
     logoText.appendChild(badge);
+
+    // Mostrar menú de admin solo si el rol es ADMIN
+    if (role === 'admin') {
+        document.getElementById('admin-menu-wrapper').style.display = 'block';
+    }
 }
 
 // Botón USER — entra directo sin contraseña
@@ -598,6 +603,46 @@ window.clearTimer = (id) => {
     if(confirm("¿Eliminar timer?")) remove(ref(db, 'bosses/' + id));
 };
 
+// Abre/cierra el dropdown del menú admin
+window.toggleAdminMenu = () => {
+    const dropdown = document.getElementById('admin-dropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+};
+
+// Cierra el dropdown si el usuario hace click fuera
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('admin-menu-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        const dropdown = document.getElementById('admin-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+});
+
+// Elimina todos los timers de bosses de intervalo (no fixed)
+// Útil después de mantenimientos del servidor cuando todos los bosses
+// aparecen al mismo tiempo y los timers anteriores ya no sirven
+window.clearAllTimers = async () => {
+    const dropdown = document.getElementById('admin-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+
+    if (!confirm("Clear ALL active timers?\nThis will remove all interval boss timers.\nFixed schedule bosses will not be affected.")) return;
+
+    const data = cachedFirebaseData;
+    if (!data) return;
+
+    // Eliminar solo bosses de intervalo (no los fixed)
+    const intervalBossIds = BOSSES.filter(b => !b.fixedSchedule).map(b => b.id);
+    for (const id of Object.keys(data)) {
+        if (intervalBossIds.includes(id)) {
+            await remove(ref(db, 'bosses/' + id));
+        }
+    }
+
+    // Limpiar sets de notificaciones
+    notifiedWarning.clear();
+    notifiedAlive.clear();
+};
+
 // ═══════════════════════════════════════════════════════════════
 // RENDERIZADO
 // Funciones que construyen y actualizan el HTML de la página.
@@ -734,7 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBossList();
     setInterval(() => {
         const clock = document.getElementById('jst-time-display');
-        if(clock) clock.textContent = "Server Time (JST): " + new Date().toLocaleTimeString('en-US', {
+        if(clock) clock.textContent = "Server Time (UTC+9): " + new Date().toLocaleTimeString('en-US', {
     timeZone: 'Asia/Tokyo',
     hour12: false
 });
