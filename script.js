@@ -1,7 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// --- CONFIGURACIÓN FIREBASE ---
+// ═══════════════════════════════════════════════════════════════
+// FIREBASE — Conexión a la base de datos en tiempo real
+// Todos los timers de bosses se sincronizan aquí entre usuarios.
+// La API key está dividida en partes para dificultar scraping simple.
+// ═══════════════════════════════════════════════════════════════
 const _k = ["AIzaSyB3oUOk", "KBUpLYdPVpt5", "i2LJdJ1lqEs3HIM"];
 const firebaseConfig = {
     apiKey: _k.join(""),
@@ -15,7 +19,91 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- VARIABLES GLOBALES ---
+// ═══════════════════════════════════════════════════════════════
+// SISTEMA DE ROLES — USER / ADMIN
+// currentRole determina si se muestran los botones de control
+// (botón X para borrar timers). El PIN se valida solo en el
+// cliente — es una protección básica contra borrados accidentales,
+// no un sistema de seguridad real.
+// ═══════════════════════════════════════════════════════════════
+let currentRole = null; // 'user' o 'admin', se asigna en la pantalla de bienvenida
+const ADMIN_PIN = '0408';
+
+// Muestra el tracker y oculta la pantalla de bienvenida
+function launchTracker(role) {
+    currentRole = role;
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('tracker').style.display = 'block';
+
+    // Añadir badge de rol junto al título
+    const logoText = document.querySelector('.logo-text');
+    const badge = document.createElement('span');
+    badge.className = `role-badge ${role}`;
+    badge.textContent = role === 'admin' ? '🔐 ADMIN' : '👤 USER';
+    logoText.appendChild(badge);
+}
+
+// Botón USER — entra directo sin contraseña
+window.enterAsUser = () => launchTracker('user');
+
+// Botón ADMIN — muestra el campo PIN
+window.showAdminPin = () => {
+    document.getElementById('pin-section').style.display = 'block';
+    const digits = document.querySelectorAll('.pin-digit');
+
+    digits.forEach((input, i) => {
+        input.value = '';
+
+        // Auto-avanzar al siguiente campo al escribir un dígito
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^0-9]/g, '').slice(-1);
+            if (input.value && i < digits.length - 1) {
+                digits[i + 1].focus();
+            }
+            // Cuando se llena el último dígito, validar automáticamente
+            if (i === digits.length - 1 && input.value) {
+                validatePin();
+            }
+        });
+
+        // Borrar con Backspace vuelve al campo anterior
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && i > 0) {
+                digits[i - 1].focus();
+            }
+        });
+    });
+
+    digits[0].focus();
+};
+
+// Valida el PIN comparando los 4 dígitos
+function validatePin() {
+    const digits = document.querySelectorAll('.pin-digit');
+    const entered = Array.from(digits).map(d => d.value).join('');
+    const errorEl = document.getElementById('pin-error');
+
+    if (entered === ADMIN_PIN) {
+        launchTracker('admin');
+    } else {
+        errorEl.style.display = 'block';
+        // Limpiar campos y volver al primero después de un momento
+        setTimeout(() => {
+            digits.forEach(d => d.value = '');
+            errorEl.style.display = 'none';
+            digits[0].focus();
+        }, 1200);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTES GLOBALES
+// Conversiones de tiempo y listas de bosses con su duración ALIVE.
+// ALIVE = ventana de tiempo en que el boss está visible antes de morir.
+//   ALIVE_1MIN → 1 minuto  (Venatus, Viorent)
+//   ALIVE_2MIN → 2 minutos (Livera, Ego, etc.)
+//   DEFAULT    → 3 minutos (todos los demás)
+// ═══════════════════════════════════════════════════════════════
 const HOUR_IN_MS = 60 * 60 * 1000;
 const DAY_IN_MS = 24 * HOUR_IN_MS;
 const WEEK_IN_MS = 7 * DAY_IN_MS;
@@ -72,7 +160,12 @@ const BOSSES = [
 let activeTimers = [];
 let cachedFirebaseData = null;
 
-// --- FUNCIONES DE TIEMPO (JST UTC+9) ---
+// ═══════════════════════════════════════════════════════════════
+// FUNCIONES DE TIEMPO
+// Todo el sistema trabaja internamente en UTC (ms desde epoch).
+// La conversión a JST (UTC+9) solo ocurre en el momento de mostrar
+// fechas al usuario — nunca se almacena hora local en Firebase.
+// ═══════════════════════════════════════════════════════════════
 function getAliveDuration(bossId) {
     if (ALIVE_1MIN.includes(bossId)) return 1 * 60 * 1000;
     if (ALIVE_2MIN.includes(bossId)) return 2 * 60 * 1000;
@@ -138,7 +231,25 @@ function formatTime(ms) {
     return `${String(totalHours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-// --- NOTIFICACIONES (NAVEGADOR + DISCORD) ---
+// Convierte un timestamp UTC a string legible en JST (UTC+9)
+// Usado tanto en notificaciones de Discord como del navegador
+function formatJST(timestamp) {
+    return new Date(timestamp).toLocaleString('en-US', {
+        timeZone: 'Asia/Tokyo',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICACIONES — NAVEGADOR + DISCORD
+// Avisa 5 min antes del spawn, cuando spawna y cuando muere.
+// Usa un Cloudflare Worker como intermediario para Discord
+// porque los navegadores bloquean requests directos a webhooks.
+// ═══════════════════════════════════════════════════════════════
 const CLOUDFLARE_WORKER = 'https://lordnine-discord.lofialter.workers.dev/';
 
 // Sets para evitar notificaciones duplicadas por evento y ciclo
@@ -168,94 +279,93 @@ function browserNotify(title, body, tag) {
     new Notification(title, { body, tag, silent: false });
 }
 
-// --- 5 minutos antes del spawn ---
+// Notificación de advertencia: 5 minutos antes del spawn
+// Se dispara una sola vez por ciclo gracias a notifiedWarning
 function notifyWarning(boss, spawnTime) {
     if (notifiedWarning.has(boss.id)) return;
     notifiedWarning.add(boss.id);
 
-    const spawnJST = new Date(spawnTime).toLocaleTimeString('en-US', {
-        timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true
-    });
+    const spawnJST = formatJST(spawnTime);
 
-    // Navegador
+    // Notificación del navegador (popup del sistema)
     browserNotify(
         `⏰ ${boss.name} spawns in 5 min!`,
-        `📍 ${boss.location}\n🕐 ${spawnJST} (JST)`,
+        `📍 ${boss.location}\n🕐 ${spawnJST} (UTC+9)`,
         `warn-${boss.id}`
     );
 
-    // Discord
+    // Mensaje a Discord vía Cloudflare Worker
     sendDiscord({
         title: `⏰ ${boss.name} — 5 minutes to spawn!`,
         color: 0xd4af37,
         fields: [
             { name: '📍 Location', value: boss.location, inline: true },
-            { name: '🕐 Spawn Time (JST)', value: spawnJST, inline: true },
-            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true },
+            { name: '🕐 Next Spawn (UTC+9)', value: spawnJST, inline: false }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
 }
 
-// --- Boss spawneó (entró en ventana ALIVE) ---
+// Notificación de spawn: el boss acaba de aparecer (entró en ventana ALIVE)
+// Se dispara una sola vez por ciclo gracias a notifiedAlive
 function notifySpawned(boss, spawnTime) {
     if (notifiedAlive.has(boss.id)) return;
     notifiedAlive.add(boss.id);
 
-    const spawnJST = new Date(spawnTime).toLocaleTimeString('en-US', {
-        timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true
-    });
+    const spawnJST = formatJST(spawnTime);
 
-    // Navegador
+    // Notificación del navegador (popup del sistema)
     browserNotify(
         `✅ ${boss.name} has spawned!`,
-        `📍 ${boss.location}\n🕐 ${spawnJST} (JST)`,
+        `📍 ${boss.location}\n🕐 ${spawnJST} (UTC+9)`,
         `alive-${boss.id}`
     );
 
-    // Discord
+    // Mensaje a Discord vía Cloudflare Worker
     sendDiscord({
         title: `✅ ${boss.name} — SPAWNED!`,
         color: 0x2ecc71,
         fields: [
             { name: '📍 Location', value: boss.location, inline: true },
-            { name: '🕐 Spawn Time (JST)', value: spawnJST, inline: true },
-            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true },
+            { name: '🕐 Spawned at (UTC+9)', value: spawnJST, inline: false }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
 }
 
-// --- Boss marcado como muerto manualmente ---
+// Notificación de muerte manual: alguien presionó el botón DEAD
+// NO se dispara cuando el auto-death registra la muerte automáticamente
 function notifyDead(bossId) {
     const boss = BOSSES.find(b => b.id === bossId);
     if (!boss) return;
 
-    const nowJST = new Date().toLocaleTimeString('en-US', {
-        timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true
-    });
+    const nowJST = formatJST(Date.now());
 
-    // Navegador
+    // Notificación del navegador (popup del sistema)
     browserNotify(
         `💀 ${boss.name} was killed!`,
-        `📍 ${boss.location}\n🕐 ${nowJST} (JST)`,
+        `📍 ${boss.location}\n🕐 ${nowJST} (UTC+9)`,
         `dead-${boss.id}`
     );
 
-    // Discord
+    // Mensaje a Discord vía Cloudflare Worker
     sendDiscord({
         title: `💀 ${boss.name} — KILLED`,
         color: 0xc0392b,
         fields: [
             { name: '📍 Location', value: boss.location, inline: true },
-            { name: '🕐 Killed at (JST)', value: nowJST, inline: true },
-            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true },
+            { name: '🕐 Killed at (UTC+9)', value: nowJST, inline: false }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
 }
 
-// --- Revisión cada segundo ---
+// Revisión que corre cada segundo desde el setInterval
+// Detecta bosses a 5 min del spawn y bosses en ventana ALIVE
+// y dispara las notificaciones correspondientes (una sola vez cada una)
 function checkSpawnNotifications() {
     const now = getNow();
     const NOTIFY_MS = 5 * 60 * 1000;
@@ -278,8 +388,14 @@ function checkSpawnNotifications() {
     });
 }
 
-// --- AUTO-DEATH TRACKING ---
-// Guarda los timeouts de auto-muerte para cancelarlos si el usuario interactúa
+// ═══════════════════════════════════════════════════════════════
+// AUTO-DEATH
+// Cuando un boss entra en ventana ALIVE sin que nadie interactúe,
+// el sistema registra automáticamente su muerte al final del ALIVE.
+// Si alguien presiona DEAD o SET antes, el timeout se cancela.
+// autoDeathTimeouts guarda referencias a los setTimeout activos
+// para poder cancelarlos cuando hay interacción manual.
+// ═══════════════════════════════════════════════════════════════
 const autoDeathTimeouts = {};
 
 function scheduleAutoDeath(bossId, spawnTime) {
@@ -310,7 +426,18 @@ function scheduleAutoDeath(bossId, spawnTime) {
     }, delay);
 }
 
-// --- CÁLCULO DE TIMERS (reutilizable desde onValue y desde setInterval) ---
+// ═══════════════════════════════════════════════════════════════
+// RECÁLCULO DE TIMERS
+// Esta función reconstruye el array activeTimers cada segundo
+// usando los datos cacheados de Firebase (cachedFirebaseData).
+// Se llama desde onValue (cuando Firebase cambia) y desde el
+// setInterval (para detectar cambios de fase sin esperar Firebase).
+//
+// Cada boss de intervalo puede estar en 3 fases:
+//   'countdown' → aún no ha spawneado, mostrando cuenta regresiva
+//   'alive'     → spawneó, mostrando ventana ALIVE con auto-death
+//   (ninguna)   → ventana ALIVE terminó, scheduleAutoDeath se encarga
+// ═══════════════════════════════════════════════════════════════
 function recomputeActiveTimers() {
     const data = cachedFirebaseData;
     activeTimers = [];
@@ -372,14 +499,23 @@ function recomputeActiveTimers() {
     }
 }
 
-// --- FIREBASE LOGIC ---
+// ═══════════════════════════════════════════════════════════════
+// LISTENER DE FIREBASE
+// onValue se ejecuta automáticamente cada vez que los datos en
+// Firebase cambian (cuando alguien marca DEAD, SET o auto-death).
+// Guarda los datos en cache local y recalcula los timers.
+// ═══════════════════════════════════════════════════════════════
 onValue(ref(db, 'bosses'), (snapshot) => {
     cachedFirebaseData = snapshot.val(); // Guardar en cache local
     recomputeActiveTimers();
     renderActivePanel();
 });
 
-// ACCIONES
+// ═══════════════════════════════════════════════════════════════
+// ACCIONES DEL USUARIO
+// Funciones expuestas en window.* para que los botones del HTML
+// puedan llamarlas directamente desde el atributo onclick.
+// ═══════════════════════════════════════════════════════════════
 window.markDead = (id) => {
     // Cancelar auto-muerte pendiente si el usuario marcó manualmente
     if (autoDeathTimeouts[id]) {
@@ -443,7 +579,16 @@ window.clearTimer = (id) => {
     if(confirm("¿Eliminar timer?")) remove(ref(db, 'bosses/' + id));
 };
 
-// --- RENDERIZADO ---
+// ═══════════════════════════════════════════════════════════════
+// RENDERIZADO
+// Funciones que construyen y actualizan el HTML de la página.
+//   getBossRowClass  → determina el color del borde izquierdo de cada boss
+//   renderBossList   → construye la lista completa de bosses (se llama
+//                      una vez al inicio y cuando se usa el buscador)
+//   renderActivePanel→ actualiza el panel de timers activos cada segundo
+//   updateBossRowClasses → actualiza SOLO los colores de borde cada segundo
+//                          sin reconstruir toda la lista (más eficiente)
+// ═══════════════════════════════════════════════════════════════
 function getBossRowClass(bossId) {
     const timer = activeTimers.find(t => t.id === bossId);
     if (!timer) return 'boss-row-inactive';
@@ -524,14 +669,7 @@ function renderActivePanel() {
         } else {
             const isUrgent = diff < 300000 && diff > 0;
             cardClass = isUrgent ? 'boss-imminent' : '';
-            spawnLabel = `Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
-                timeZone: 'Asia/Tokyo',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            })}`;
+            spawnLabel = `Next Spawn: ${formatJST(t.targetTime)}`;
             countdownHtml = `
                 <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:#4CAF50;">
                     ${formatTime(diff)}
@@ -547,7 +685,7 @@ function renderActivePanel() {
                 </div>
                 <div class="timer-values" style="text-align:right">
                     ${countdownHtml}
-                    ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
+                    ${!t.isFixed && currentRole === 'admin' ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
                 </div>
             </div>
         `;
@@ -566,7 +704,12 @@ function updateBossRowClasses() {
     });
 }
 
-// Inicialización
+// ═══════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// Al cargar la página: pide permiso de notificaciones, renderiza
+// la lista de bosses y arranca el loop de 1 segundo que mantiene
+// todo actualizado en tiempo real.
+// ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
     requestNotificationPermission();
     renderBossList();
