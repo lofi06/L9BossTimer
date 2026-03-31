@@ -138,6 +138,57 @@ function formatTime(ms) {
     return `${String(totalHours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
+// --- NOTIFICACIONES DEL NAVEGADOR ---
+// Set con los IDs de bosses que ya recibieron notificación en este ciclo
+// Se limpia cuando el boss spawna o cuando se registra nueva muerte
+const notifiedBosses = new Set();
+
+function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+function notifyBoss(boss, minutesLeft) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (notifiedBosses.has(boss.id)) return; // Ya notificado en este ciclo
+
+    notifiedBosses.add(boss.id);
+
+    const spawnTime = activeTimers.find(t => t.id === boss.id)?.targetTime;
+    const spawnJST = spawnTime ? new Date(spawnTime).toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Tokyo',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    }) : '';
+
+    new Notification(`⚔️ ${boss.name} spawns in ${minutesLeft} min!`, {
+        body: `📍 ${boss.location}\n🕐 ${spawnJST} (JST)`,
+        icon: `images/${boss.id}.png`,
+        tag: boss.id, // Evita duplicados si ya hay una notif del mismo boss
+        silent: false
+    });
+}
+
+function checkSpawnNotifications() {
+    if (Notification.permission !== 'granted') return;
+    const now = getNow();
+    const NOTIFY_MS = 5 * 60 * 1000; // 5 minutos en ms
+    const WINDOW_MS = 10 * 1000;     // Ventana de detección: 10 segundos (evita perderse el tick exacto)
+
+    activeTimers.forEach(t => {
+        if (t.phase === 'alive') return; // Ya spawneó, no notificar
+        const diff = t.targetTime - now;
+        if (diff > 0 && diff <= NOTIFY_MS + WINDOW_MS && diff > NOTIFY_MS - WINDOW_MS) {
+            const boss = BOSSES.find(b => b.id === t.id);
+            if (boss) notifyBoss(boss, 5);
+        }
+    });
+}
+
 // --- AUTO-DEATH TRACKING ---
 // Guarda los timeouts de auto-muerte para cancelarlos si el usuario interactúa
 const autoDeathTimeouts = {};
@@ -246,8 +297,9 @@ window.markDead = (id) => {
         clearTimeout(autoDeathTimeouts[id]);
         delete autoDeathTimeouts[id];
     }
-    // isManual: true → el spawn siguiente NO suma aliveDuration
-    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString(), isManual: true });
+    // Limpiar notificación previa para que avise en el próximo ciclo
+    notifiedBosses.delete(id);
+    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
 };
 
 window.setManualTime = (id) => {
@@ -282,6 +334,8 @@ window.setManualTime = (id) => {
                 clearTimeout(autoDeathTimeouts[id]);
                 delete autoDeathTimeouts[id];
             }
+            // Limpiar notificación previa para que avise en el próximo ciclo
+            notifiedBosses.delete(id);
 
             // isManual: true → el spawn siguiente NO suma aliveDuration
             set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString(), isManual: true });
@@ -421,6 +475,7 @@ function updateBossRowClasses() {
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
+    requestNotificationPermission();
     renderBossList();
     setInterval(() => {
         const clock = document.getElementById('jst-time-display');
@@ -431,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Recalcular fases y actualizar bordes sin reconstruir el DOM completo
         recomputeActiveTimers();
         updateBossRowClasses();
+        checkSpawnNotifications();
         renderActivePanel();
     }, 1000);
 });
