@@ -70,6 +70,7 @@ const BOSSES = [
 ];
 
 let activeTimers = [];
+let cachedFirebaseData = null;
 
 // --- FUNCIONES DE TIEMPO (JST UTC+9) ---
 function getAliveDuration(bossId) {
@@ -169,11 +170,10 @@ function scheduleAutoDeath(bossId, spawnTime) {
     }, delay);
 }
 
-// --- FIREBASE LOGIC --- 
-onValue(ref(db, 'bosses'), (snapshot) => {
-    const data = snapshot.val();
+// --- CÁLCULO DE TIMERS (reutilizable desde onValue y desde setInterval) ---
+function recomputeActiveTimers() {
+    const data = cachedFirebaseData;
     activeTimers = [];
-
     const now = getNow();
 
     // Bosses Fijos
@@ -195,12 +195,10 @@ onValue(ref(db, 'bosses'), (snapshot) => {
                 const aliveDuration = getAliveDuration(boss.id);
                 const intervalMs = boss.interval * HOUR_IN_MS;
 
-                // Spawn = muerte + interval (sin aliveDuration)
-                // La ventana ALIVE es DESPUÉS del spawn, no cuenta para el siguiente ciclo
+                // Spawn = muerte + interval
                 let spawnTime = deathTime + intervalMs;
 
                 // Avanzar ciclos hasta el actual
-                // Ciclo completo: spawnTime → ventana ALIVE (aliveDuration) → siguiente spawn
                 while (spawnTime + aliveDuration < now) {
                     spawnTime += intervalMs;
                 }
@@ -221,20 +219,23 @@ onValue(ref(db, 'bosses'), (snapshot) => {
                     activeTimers.push({
                         id: boss.id,
                         name: boss.name,
-                        targetTime: spawnTime,   // cuándo spawneó
-                        aliveEndsAt: aliveEndsAt, // cuándo termina el ALIVE
+                        targetTime: spawnTime,
+                        aliveEndsAt: aliveEndsAt,
                         isFixed: false,
                         phase: 'alive'
                     });
-                    // Programar auto-muerte al final de la ventana ALIVE
                     scheduleAutoDeath(boss.id, spawnTime);
                 }
-                // CASO C: La ventana ALIVE ya terminó pero Firebase aún no actualizó
-                // (el setTimeout de scheduleAutoDeath se encargará, no agregamos timer)
+                // CASO C: ventana ALIVE terminó, scheduleAutoDeath se encarga
             }
         }
     }
+}
 
+// --- FIREBASE LOGIC ---
+onValue(ref(db, 'bosses'), (snapshot) => {
+    cachedFirebaseData = snapshot.val(); // Guardar en cache local
+    recomputeActiveTimers();
     renderActivePanel();
 });
 
@@ -407,6 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
     timeZone: 'Asia/Tokyo',
     hour12: false
 });
+        // Recalcular fases cada segundo para detectar countdown → alive sin esperar Firebase
+        recomputeActiveTimers();
         renderActivePanel();
     }, 1000);
 });
