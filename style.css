@@ -274,3 +274,27 @@ header {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0d1117; }
 ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+
+/* =======================================================
+   ESTADOS: ALIVE / IMMINENT
+   ======================================================= */
+.boss-imminent {
+    border-left-color: #ff4444;
+    background: rgba(255, 68, 68, 0.05);
+}
+
+.boss-alive {
+    border-left-color: #ff9900;
+    background: rgba(255, 153, 0, 0.08);
+}
+
+@keyframes alivePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.alive-blink {
+    animation: alivePulse 1s ease-in-out infinite;
+    font-size: 1em;
+    letter-spacing: 1px;
+}
