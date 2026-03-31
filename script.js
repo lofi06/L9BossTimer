@@ -251,6 +251,8 @@ function formatJST(timestamp) {
 // porque los navegadores bloquean requests directos a webhooks.
 // ═══════════════════════════════════════════════════════════════
 const CLOUDFLARE_WORKER = 'https://lordnine-discord.lofialter.workers.dev/';
+// URL base de las imágenes de bosses en GitHub Pages (para los embeds de Discord)
+const BASE_URL = 'https://lofi06.github.io/L9BossTimer/images/';
 
 // Sets para evitar notificaciones duplicadas por evento y ciclo
 const notifiedWarning = new Set();  // Avisó "5 min antes"
@@ -263,12 +265,17 @@ function requestNotificationPermission() {
     }
 }
 
-// --- Envío a Discord vía Cloudflare Worker ---
+// Envío a Discord vía Cloudflare Worker
+// content: '@everyone' tagea a todos en el canal
+// embed.thumbnail: imagen del boss a la derecha del embed
 function sendDiscord(embed) {
     fetch(CLOUDFLARE_WORKER, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ embeds: [embed] })
+        body: JSON.stringify({
+            content: '@everyone',
+            embeds: [embed]
+        })
     }).catch(() => {}); // Silenciar errores de red para no romper el tracker
 }
 
@@ -294,14 +301,15 @@ function notifyWarning(boss, spawnTime) {
         `warn-${boss.id}`
     );
 
-    // Mensaje a Discord vía Cloudflare Worker
+    // Mensaje a Discord — incluye imagen del boss y @everyone
     sendDiscord({
         title: `⏰ ${boss.name} — 5 minutes to spawn!`,
         color: 0xd4af37,
+        thumbnail: { url: `${BASE_URL}${boss.id}.png` },
         fields: [
             { name: '📍 Location', value: boss.location, inline: true },
             { name: '⚔️ Level', value: `${boss.level}`, inline: true },
-            { name: '🕐 Next Spawn (UTC+9)', value: spawnJST, inline: false }
+            { name: '🕐 Spawn Time (UTC+9)', value: spawnJST, inline: false }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
@@ -313,23 +321,21 @@ function notifySpawned(boss, spawnTime) {
     if (notifiedAlive.has(boss.id)) return;
     notifiedAlive.add(boss.id);
 
-    const spawnJST = formatJST(spawnTime);
-
     // Notificación del navegador (popup del sistema)
     browserNotify(
         `✅ ${boss.name} has spawned!`,
-        `📍 ${boss.location}\n🕐 ${spawnJST} (UTC+9)`,
+        `📍 ${boss.location}`,
         `alive-${boss.id}`
     );
 
-    // Mensaje a Discord vía Cloudflare Worker
+    // Mensaje a Discord — solo ubicación y nivel, sin hora (ya spawneó)
     sendDiscord({
         title: `✅ ${boss.name} — SPAWNED!`,
         color: 0x2ecc71,
+        thumbnail: { url: `${BASE_URL}${boss.id}.png` },
         fields: [
             { name: '📍 Location', value: boss.location, inline: true },
-            { name: '⚔️ Level', value: `${boss.level}`, inline: true },
-            { name: '🕐 Spawned at (UTC+9)', value: spawnJST, inline: false }
+            { name: '⚔️ Level', value: `${boss.level}`, inline: true }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
@@ -337,27 +343,31 @@ function notifySpawned(boss, spawnTime) {
 
 // Notificación de muerte manual: alguien presionó el botón DEAD
 // NO se dispara cuando el auto-death registra la muerte automáticamente
+// Calcula el próximo respawn = ahora + intervalo del boss
 function notifyDead(bossId) {
     const boss = BOSSES.find(b => b.id === bossId);
     if (!boss) return;
 
-    const nowJST = formatJST(Date.now());
+    // Calcular próximo respawn basado en la hora actual + intervalo
+    const nextRespawn = Date.now() + (boss.interval * HOUR_IN_MS);
+    const nextRespawnJST = formatJST(nextRespawn);
 
     // Notificación del navegador (popup del sistema)
     browserNotify(
         `💀 ${boss.name} was killed!`,
-        `📍 ${boss.location}\n🕐 ${nowJST} (UTC+9)`,
+        `📍 ${boss.location}\n🔄 Respawn: ${nextRespawnJST} (UTC+9)`,
         `dead-${boss.id}`
     );
 
-    // Mensaje a Discord vía Cloudflare Worker
+    // Mensaje a Discord — muestra próximo respawn en lugar de hora de muerte
     sendDiscord({
         title: `💀 ${boss.name} — KILLED`,
         color: 0xc0392b,
+        thumbnail: { url: `${BASE_URL}${boss.id}.png` },
         fields: [
             { name: '📍 Location', value: boss.location, inline: true },
             { name: '⚔️ Level', value: `${boss.level}`, inline: true },
-            { name: '🕐 Killed at (UTC+9)', value: nowJST, inline: false }
+            { name: '🔄 Next Respawn (UTC+9)', value: nextRespawnJST, inline: false }
         ],
         footer: { text: 'LordNine Boss Tracker' }
     });
