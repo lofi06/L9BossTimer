@@ -19,7 +19,15 @@ const db = getDatabase(app);
 const HOUR_IN_MS = 60 * 60 * 1000;
 const DAY_IN_MS = 24 * HOUR_IN_MS;
 const WEEK_IN_MS = 7 * DAY_IN_MS;
+// --- ALIVE DURATIONS ---
+const ALIVE_1MIN = ['venatus', 'viorent'];
 
+const ALIVE_2MIN = [
+    'livera', 'undomiel', 'araneo', 'ego',
+    'ladydalia', 'wannitas', 'metus', 'duplican', 'baronbraudmore'
+];
+
+const DEFAULT_ALIVE_MS = 3 * 60 * 1000;
 const BOSSES = [
     { id: 'venatus', name: 'Venatus', level: 60, interval: 10, location: 'Corrupted Basin' }, 
     { id: 'viorent', name: 'Viorent', level: 65, interval: 10, location: 'Crecent Lake' }, 
@@ -64,7 +72,11 @@ const BOSSES = [
 let activeTimers = [];
 
 // --- FUNCIONES DE TIEMPO (JST UTC+9) ---
-
+function getAliveDuration(bossId) {
+    if (ALIVE_1MIN.includes(bossId)) return 1 * 60 * 1000;
+    if (ALIVE_2MIN.includes(bossId)) return 2 * 60 * 1000;
+    return DEFAULT_ALIVE_MS;
+}
 function getNow() {
     return Date.now();
 }
@@ -141,9 +153,17 @@ onValue(ref(db, 'bosses'), (snapshot) => {
             const boss = BOSSES.find(b => b.id === id);
             if (boss && data[id].deathTime) {
                 const deathTime = Date.parse(data[id].deathTime);
-                let target = deathTime + (boss.interval * HOUR_IN_MS);
                 const now = getNow();
-                while (target < now) { target += (boss.interval * HOUR_IN_MS); }
+                const aliveDuration = getAliveDuration(boss.id);
+                
+                let spawnTime = deathTime + (boss.interval * HOUR_IN_MS);
+                
+                // Avanzar ciclos respetando ventana ALIVE
+                while (spawnTime + aliveDuration < now) {
+                    spawnTime += (boss.interval * HOUR_IN_MS);
+                }
+                
+                const target = spawnTime;
                 activeTimers.push({ id: boss.id, name: boss.name, targetTime: target, isFixed: false });
             }
         }
