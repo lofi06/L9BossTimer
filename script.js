@@ -141,39 +141,45 @@ function formatTime(ms) {
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
     activeTimers = [];
+    const now = getNow();
 
-    // Bosses Fijos
+    // --- Bosses con horario fijo ---
     BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
-        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
+        activeTimers.push({ 
+            id: boss.id, 
+            name: boss.name, 
+            targetTime: calculateNextFixedTarget(boss), 
+            isFixed: true 
+        });
     });
 
-    // Bosses por Intervalo
+    // --- Bosses por intervalo ---
     if (data) {
         for (let id in data) {
             const boss = BOSSES.find(b => b.id === id);
             if (boss && data[id].deathTime) {
                 const deathTime = Date.parse(data[id].deathTime);
-                const now = getNow();
                 const aliveDuration = getAliveDuration(boss.id);
-                
-                let spawnTime = deathTime + (boss.interval * HOUR_IN_MS);
-                
-                // Avanzar ciclos respetando ventana ALIVE
-                while (spawnTime + aliveDuration < now) {
-                    spawnTime += (boss.interval * HOUR_IN_MS);
+                const intervalMs = boss.interval * HOUR_IN_MS;
+
+                // Calcular el próximo spawn después de la ventana ALIVE
+                let spawnTime = deathTime + aliveDuration;
+                while (spawnTime < now) {
+                    spawnTime += intervalMs;
                 }
-                
-                const target = spawnTime;
+
                 activeTimers.push({
                     id: boss.id,
                     name: boss.name,
                     deathTime: deathTime,
                     interval: boss.interval,
-                    isFixed: false
+                    isFixed: false,
+                    targetTime: spawnTime
                 });
             }
         }
     }
+
     renderActivePanel();
 });
 
@@ -265,9 +271,7 @@ function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = getNow();
     
-    const map = new Map();
-    activeTimers.forEach(t => map.set(t.id, t));
-    const sorted = Array.from(map.values()).sort((a, b) => a.targetTime - b.targetTime);
+    const sorted = activeTimers.slice().sort((a, b) => a.targetTime - b.targetTime);
 
     if (sorted.length === 0) {
         panel.innerHTML = '<p class="no-timers">No active timers.</p>';
@@ -275,49 +279,29 @@ function renderActivePanel() {
     }
 
     panel.innerHTML = sorted.map(t => {
-        let targetTime;
+        const diff = t.targetTime - now;
+        const isUrgent = diff < 300000 && diff > 0;
 
-if (t.isFixed) {
-    targetTime = t.targetTime;
-} else {
-    const aliveDuration = getAliveDuration(t.id);
-    const intervalMs = t.interval * HOUR_IN_MS;
-        let targetTime;
-            if (t.isFixed) {
-                targetTime = t.targetTime;
-            } else {
-                const aliveDuration = getAliveDuration(t.id);
-                const intervalMs = t.interval * HOUR_IN_MS;
-                // spawnTime = deathTime + aliveDuration
-                let spawnTime = t.deathTime + aliveDuration;
-                // Si ya pasó la ventana ALIVE y estamos después
-                while (spawnTime < now) {
-                    spawnTime += intervalMs;
-                }
-                targetTime = spawnTime;
-            }
-    const diff = targetTime - now;
-    const isUrgent = diff < 300000 && diff > 0;
         return `
-            <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
-                <div class="timer-info">
-                    <h3>${t.name}</h3>
-                    <p>Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
-                        timeZone: 'Asia/Tokyo',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    })}</p>
-                </div>
-                <div class="timer-values" style="text-align:right">
-                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
-                        ${diff < 0 ? 'ALIVE' : formatTime(diff)}
-                    </span>
-                    ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
-                </div>
+        <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
+            <div class="timer-info">
+                <h3>${t.name}</h3>
+                <p>Next Spawn: ${new Date(t.targetTime).toLocaleString('en-US', {
+                    timeZone: 'Asia/Tokyo',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                })}</p>
             </div>
+            <div class="timer-values" style="text-align:right">
+                <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
+                    ${diff < 0 ? 'ALIVE' : formatTime(diff)}
+                </span>
+                ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
+            </div>
+        </div>
         `;
     }).join('');
 }
