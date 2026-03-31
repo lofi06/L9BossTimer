@@ -137,14 +137,21 @@ function formatTime(ms) {
     return `${String(totalHours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-// --- FIREBASE LOGIC ---
+// --- FIREBASE LOGIC CORREGIDO --- 
 onValue(ref(db, 'bosses'), (snapshot) => {
     const data = snapshot.val();
     activeTimers = [];
 
+    const now = getNow();
+
     // Bosses Fijos
     BOSSES.filter(b => b.fixedSchedule).forEach(boss => {
-        activeTimers.push({ id: boss.id, name: boss.name, targetTime: calculateNextFixedTarget(boss), isFixed: true });
+        activeTimers.push({
+            id: boss.id,
+            name: boss.name,
+            targetTime: calculateNextFixedTarget(boss),
+            isFixed: true
+        });
     });
 
     // Bosses por Intervalo
@@ -153,21 +160,26 @@ onValue(ref(db, 'bosses'), (snapshot) => {
             const boss = BOSSES.find(b => b.id === id);
             if (boss && data[id].deathTime) {
                 const deathTime = Date.parse(data[id].deathTime);
-                const now = getNow();
                 const aliveDuration = getAliveDuration(boss.id);
-                
-                let spawnTime = deathTime + (boss.interval * HOUR_IN_MS);
-                
-                // Avanzar ciclos respetando ventana ALIVE
-                while (spawnTime + aliveDuration < now) {
+
+                // Inicialmente el spawn es deathTime + aliveDuration + interval
+                let spawnTime = deathTime + aliveDuration + (boss.interval * HOUR_IN_MS);
+
+                // Avanzar ciclos si el spawn ya pasó
+                while (spawnTime < now) {
                     spawnTime += (boss.interval * HOUR_IN_MS);
                 }
-                
-                const target = spawnTime;
-                activeTimers.push({ id: boss.id, name: boss.name, targetTime: target, isFixed: false });
+
+                activeTimers.push({
+                    id: boss.id,
+                    name: boss.name,
+                    targetTime: spawnTime,
+                    isFixed: false
+                });
             }
         }
     }
+
     renderActivePanel();
 });
 
