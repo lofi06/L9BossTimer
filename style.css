@@ -102,12 +102,31 @@ header {
    ======================================================= */
 .boss-tracker {
     display: flex;
-    justify-content: space-between; /* Empuja los botones a la derecha */
+    justify-content: space-between;
     align-items: center;
     padding: 10px 15px;
     border-bottom: 1px solid #21262d;
+    border-left: 3px solid transparent;
     background: rgba(22, 27, 34, 0.5);
     margin-bottom: 2px;
+    transition: border-left-color 0.5s ease, background 0.5s ease;
+}
+
+/* Sin timer → borde dorado apagado (neutral, desconocido) */
+.boss-row-inactive {
+    border-left-color: rgba(212, 175, 55, 0.25);
+}
+
+/* Timer activo en countdown → carmesí oscuro */
+.boss-row-active {
+    border-left-color: #c0392b;
+    background: rgba(192, 57, 43, 0.05);
+}
+
+/* Timer en ventana ALIVE → naranja ardiente */
+.boss-row-alive {
+    border-left-color: #ff9900;
+    background: rgba(255, 153, 0, 0.07);
 }
 
 .boss-image { 
@@ -162,38 +181,40 @@ header {
 
 .mark-dead-btn { 
     font-family: 'Cinzel', serif; 
-    background: #3c6041; 
-    color: white; 
-    border: none; 
+    background: #6b1a1a;
+    color: #e8c9c9; 
+    border: 1px solid #8b2020;
     padding: 5px 10px;
     border-radius: 4px; 
     cursor: pointer;
     font-size: 0.8em;
     width: 100%;
-
-    text-shadow: 0 0 4px rgba(255,255,255,0.25);
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px rgba(200, 50, 50, 0.4);
 }
 
 .set-btn { 
     font-family: 'Cinzel', serif; 
-    background: #805d93; 
-    color: white; 
-    border: none; 
+    background: #2a2a1e;
+    color: #d4af37;
+    border: 1px solid #6b5a1a;
     padding: 5px 10px;
     border-radius: 4px; 
     cursor: pointer; 
     font-size: 0.8em;
     width: 100%;
-
-    text-shadow: 0 0 4px rgba(255,255,255,0.25);
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px rgba(212, 175, 55, 0.3);
 }
 
 .mark-dead-btn:hover {
-    box-shadow: 0 0 8px rgba(80, 200, 120, 0.6);
+    background: #8b2020;
+    box-shadow: 0 0 10px rgba(192, 57, 43, 0.6);
 }
 
 .set-btn:hover {
-    box-shadow: 0 0 8px rgba(180, 120, 255, 0.6);
+    background: #3a3518;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
 }
 
 .fixed-badge {
