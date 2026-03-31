@@ -195,12 +195,13 @@ onValue(ref(db, 'bosses'), (snapshot) => {
                 const aliveDuration = getAliveDuration(boss.id);
                 const intervalMs = boss.interval * HOUR_IN_MS;
 
-                // Primer spawn esperado tras la muerte registrada
-                let spawnTime = deathTime + aliveDuration + intervalMs;
+                // Spawn = muerte + interval (sin aliveDuration)
+                // La ventana ALIVE es DESPUÉS del spawn, no cuenta para el siguiente ciclo
+                let spawnTime = deathTime + intervalMs;
 
-                // Avanzar ciclos completos (spawn + alive + interval) hasta llegar al ciclo actual
-                // Un "ciclo" es: spawn → ALIVE window → siguiente countdown
-                while (spawnTime + aliveDuration + intervalMs < now) {
+                // Avanzar ciclos hasta el actual
+                // Ciclo completo: spawnTime → ventana ALIVE (aliveDuration) → siguiente spawn
+                while (spawnTime + aliveDuration < now) {
                     spawnTime += intervalMs;
                 }
 
@@ -244,7 +245,8 @@ window.markDead = (id) => {
         clearTimeout(autoDeathTimeouts[id]);
         delete autoDeathTimeouts[id];
     }
-    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
+    // isManual: true → el spawn siguiente NO suma aliveDuration
+    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString(), isManual: true });
 };
 
 window.setManualTime = (id) => {
@@ -280,8 +282,8 @@ window.setManualTime = (id) => {
                 delete autoDeathTimeouts[id];
             }
 
-            // Guardar directamente
-            set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString() });
+            // isManual: true → el spawn siguiente NO suma aliveDuration
+            set(ref(db, 'bosses/' + id), { deathTime: new Date(utcTime).toISOString(), isManual: true });
             input.style.display = "none";
         } else {
             input.style.display = "none";
