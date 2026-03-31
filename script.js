@@ -195,23 +195,16 @@ if (data) {
 
 // ACCIONES
 window.markDead = (id) => {
-    const boss = BOSSES.find(b => b.id === id);
-    if (!boss) return;
-
-    const now = getNow();
-    const aliveDuration = getAliveDuration(boss.id);
-    const intervalMs = boss.interval * HOUR_IN_MS;
-
-    // Establecer deathTime como "ahora - aliveDuration" para que al sumarle aliveDuration quede el spawn correcto
-    const deathTime = now - aliveDuration;
-
-    set(ref(db, 'bosses/' + id), { deathTime: new Date(deathTime).toISOString() });
+    const now = new Date();
+    const deathTimeISO = now.toISOString(); // Se guarda como UTC directo
+    set(ref(db, 'bosses/' + id), { deathTime: deathTimeISO });
 };
 
 window.setManualTime = (id) => {
     const input = document.getElementById(`time-input-${id}`);
     
     if (input.style.display === "none") {
+        // Mostrar input y cargar hora actual JST
         const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
         const year = nowJST.getFullYear();
         const month = String(nowJST.getMonth() + 1).padStart(2, '0');
@@ -224,23 +217,16 @@ window.setManualTime = (id) => {
         input.focus();
     } else {
         if (input.value) {
+            // Leer input y convertir a UTC correcto
             const [datePart, timePart] = input.value.split("T");
             const [year, month, day] = datePart.split("-").map(Number);
             const [hour, minute] = timePart.split(":").map(Number);
-
-            const boss = BOSSES.find(b => b.id === id);
-            if (!boss) return;
-
-            const aliveDuration = getAliveDuration(boss.id);
-
-            // Crear fecha JST
-            const jstTime = new Date(year, month - 1, day, hour, minute);
-
-            // Guardar deathTime como "hora indicada - ALIVE duration"
-            const deathTime = jstTime.getTime() - aliveDuration;
-
-            // Guardar en Firebase en UTC correctamente
-            set(ref(db, 'bosses/' + id), { deathTime: new Date(deathTime).toISOString() });
+            
+            // Crear fecha local, luego restar 9h para obtener UTC
+            const localDate = new Date(year, month - 1, day, hour, minute);
+            const deathTimeISO = new Date(localDate.getTime() - (9*60*60*1000)).toISOString();
+            
+            set(ref(db, 'bosses/' + id), { deathTime: deathTimeISO });
             input.style.display = "none";
         } else {
             input.style.display = "none";
@@ -298,9 +284,22 @@ function renderActivePanel() {
     const map = new Map();
     activeTimers.forEach(t => map.set(t.id, t));
     const sorted = Array.from(map.values()).sort((a, b) => {
-        const tA = a.targetTime ?? 0;
-        const tB = b.targetTime ?? 0;
-        return tA - tB;
+        // Asegurarnos de calcular targetTime antes de ordenar
+        if (!a.targetTime && !a.isFixed && a.deathTime) {
+            const aliveDuration = getAliveDuration(a.id);
+            const intervalMs = a.interval * HOUR_IN_MS;
+            let spawnTime = a.deathTime + aliveDuration;
+            while (spawnTime < now) spawnTime += intervalMs;
+            a.targetTime = spawnTime;
+        }
+        if (!b.targetTime && !b.isFixed && b.deathTime) {
+            const aliveDuration = getAliveDuration(b.id);
+            const intervalMs = b.interval * HOUR_IN_MS;
+            let spawnTime = b.deathTime + aliveDuration;
+            while (spawnTime < now) spawnTime += intervalMs;
+            b.targetTime = spawnTime;
+        }
+        return (a.targetTime || 0) - (b.targetTime || 0);
     });
 
     if (sorted.length === 0) {
@@ -309,50 +308,25 @@ function renderActivePanel() {
     }
 
     panel.innerHTML = sorted.map(t => {
-        let targetTime;
-        const boss = BOSSES.find(b => b.id === t.id);
-        const aliveDuration = boss ? getAliveDuration(boss.id) : DEFAULT_ALIVE_MS;
-        const intervalMs = boss ? boss.interval * HOUR_IN_MS : 3 * HOUR_IN_MS;
-
-        if (t.isFixed) {
-            targetTime = t.targetTime;
-        } else {
-            // Spawn inicial + ALIVE
-            let spawnTime = t.deathTime + aliveDuration;
-
-            if (now < spawnTime) {
-                // Aún no apareció, timer hasta spawn
-                targetTime = spawnTime;
-            } else if (now < spawnTime + aliveDuration) {
-                // Dentro de la ventana ALIVE
-                targetTime = now; // Mostramos ALIVE
-            } else {
-                // Después de ALIVE, calcular siguiente spawn
-                while (spawnTime < now) {
-                    spawnTime += intervalMs;
-                }
-                targetTime = spawnTime;
-            }
-        }
-
+        let targetTime = t.isFixed ? t.targetTime : t.targetTime || now;
         const diff = targetTime - now;
         const isUrgent = diff < 300000 && diff > 0;
 
         return `
-            <div class="active-timer-card ${diff <= 0 ? 'boss-alive' : isUrgent ? 'boss-imminent' : ''}">
+            <div class="active-timer-card ${isUrgent ? 'boss-imminent' : ''}">
                 <div class="timer-info">
                     <h3>${t.name}</h3>
-                    <p>Next Spawn: ${diff <= 0 ? 'ALIVE' : new Date(targetTime).toLocaleString('en-US', {
+                    <p>Next Spawn: ${t.isFixed ? new Date(t.targetTime).toLocaleString('en-US', {
                         timeZone: 'Asia/Tokyo',
                         month: 'short',
                         day: 'numeric',
                         hour: 'numeric',
                         minute: '2-digit',
                         hour12: true
-                    })}</p>
+                    }) : 'Manual / Interval-based'}</p>
                 </div>
                 <div class="timer-values" style="text-align:right">
-                    <span class="countdown-value ${diff <= 0 ? 'urgent' : ''}" style="color:${diff < 0 ? '#ff4444' : '#4CAF50'}">
+                    <span class="countdown-value ${isUrgent ? 'urgent' : ''}" style="color:${diff < 0 ? '#4CAF50' : '#4CAF50'}">
                         ${diff <= 0 ? 'ALIVE' : formatTime(diff)}
                     </span>
                     ${!t.isFixed ? `<button class="clear-btn" onclick="window.clearTimer('${t.id}')">X</button>` : ''}
