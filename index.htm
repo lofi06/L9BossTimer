@@ -56,9 +56,21 @@
     <header>
         <div class="logo-text">
             <h1>LORDNINE BOSS SPAWN TRACKER</h1>
-            <p id="jst-time-display" class="server-time">Server Time (JST): --:--:--</p>
+            <p id="jst-time-display" class="server-time">Server Time (UTC+9): --:--:--</p>
         </div>
-        <input type="text" id="search-boss" placeholder="Search boss, level or map...">
+        <div class="header-right">
+            <input type="text" id="search-boss" placeholder="Search boss, level or map...">
+            <!-- Menú de acciones admin — solo visible si el rol es ADMIN -->
+            <div id="admin-menu-wrapper" class="admin-menu-wrapper" style="display:none;">
+                <button class="admin-menu-btn" onclick="toggleAdminMenu()">⚙️ ADMIN ▾</button>
+                <div id="admin-dropdown" class="admin-dropdown" style="display:none;">
+                    <button class="admin-action-btn danger" onclick="clearAllTimers()">
+                        🗑️ Clear All Timers
+                        <span class="action-desc">Remove all interval boss timers</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </header>
 
     <div class="main-layout">
