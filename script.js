@@ -185,7 +185,17 @@ onValue(ref(db, 'bosses'), (snapshot) => {
 
 // ACCIONES
 window.markDead = (id) => {
-    set(ref(db, 'bosses/' + id), { deathTime: new Date().toISOString() });
+    const boss = BOSSES.find(b => b.id === id);
+    if (!boss) return;
+
+    const now = getNow();
+    const aliveDuration = getAliveDuration(boss.id);
+    const intervalMs = boss.interval * HOUR_IN_MS;
+
+    // Establecer deathTime como "ahora - aliveDuration" para que al sumarle aliveDuration quede el spawn correcto
+    const deathTime = now - aliveDuration;
+
+    set(ref(db, 'bosses/' + id), { deathTime: new Date(deathTime).toISOString() });
 };
 
 window.setManualTime = (id) => {
