@@ -35,12 +35,12 @@ function launchTracker(role) {
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('tracker').style.display = 'block';
 
-    // Añadir badge de rol junto al título
-    const logoText = document.querySelector('.logo-text');
-    const badge = document.createElement('span');
-    badge.className = `role-badge ${role}`;
-    badge.textContent = role === 'admin' ? '🔐 ADMIN' : '👤 USER';
-    logoText.appendChild(badge);
+    // Insertar badge de rol en la misma línea que el título (dentro de logo-title-row)
+    const badgeSlot = document.getElementById('role-badge-slot');
+    if (badgeSlot) {
+        badgeSlot.className = `role-badge ${role}`;
+        badgeSlot.textContent = role === 'admin' ? '🔐 ADMIN' : '👤 USER';
+    }
 
     // Mostrar menú de admin solo si el rol es ADMIN
     if (role === 'admin') {
