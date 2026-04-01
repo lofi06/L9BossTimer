@@ -20,16 +20,31 @@ body {
    ======================================================= */
 header {
     background-color: #161b22;
-    padding: 9px 30px; /* Reducido para ahorrar espacio vertical */
+    padding: 9px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #30363d;
+    height: 60px; /* Altura fija para que el layout no se mueva */
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.logo-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .logo-text h1 {
     color: #d4af37;
-    font-size: 1.3em; /* Un poco más pequeño que antes */
+    font-size: 1.3em;
     margin: 0;
     letter-spacing: 2px;
     font-weight: 700;
@@ -59,7 +74,7 @@ header {
    ======================================================= */
 .main-layout { 
     display: flex; 
-    height: calc(100vh - 70px); /* Ajuste según el nuevo header */
+    height: calc(100vh - 60px); /* Igual a la altura fija del header */
 }
 
 .boss-list-container { 
