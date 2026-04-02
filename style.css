@@ -161,11 +161,12 @@ header {
 
 .next-boss-countdown {
     font-family: 'Roboto Mono', monospace;
-    font-size: 0.85em;
+    font-size: 0.82em;
     font-weight: 700;
     color: #d4af37;
     text-align: right;
     flex-shrink: 0;
+    white-space: nowrap; /* Evita que el countdown se parta en varias líneas */
 }
 
 .next-boss-time {
@@ -178,7 +179,7 @@ header {
 .section-header h2 { 
     color: #d4af37; 
     margin: 0; 
-    font-size: 1.1em; 
+    font-size: 0.95em; 
     text-align: center; 
     letter-spacing: 1px; 
 }
@@ -342,12 +343,6 @@ header {
     display: flex; 
     justify-content: space-between; 
     align-items: center;
-    animation: cardFadeIn 0.4s ease forwards;
-}
-
-@keyframes cardFadeIn {
-    from { opacity: 0; transform: translateX(8px); }
-    to   { opacity: 1; transform: translateX(0); }
 }
 
 .active-timer-card h3 { 
