@@ -98,6 +98,83 @@ header {
     background: #161b22; 
 }
 
+/* =======================================================
+   NEXT BOSS — Card destacada en el panel de timers
+   ======================================================= */
+.next-boss-card {
+    margin: 10px 10px 0;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, rgba(22,27,34,0.9), rgba(15,20,28,0.95));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-left: 3px solid #d4af37;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.08);
+    animation: nextBossGlow 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes nextBossGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.08); }
+    50%       { box-shadow: 0 0 22px rgba(212, 175, 55, 0.22); }
+}
+
+.next-boss-img {
+    width: 42px;
+    height: 42px;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.next-boss-info {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.next-boss-label {
+    font-size: 0.6em;
+    color: #d4af37;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.next-boss-name {
+    font-size: 0.9em;
+    color: #e5d8b6;
+    font-weight: 700;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.next-boss-location {
+    font-size: 0.65em;
+    color: #4CAF50;
+    margin-top: 1px;
+}
+
+.next-boss-countdown {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #d4af37;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.next-boss-time {
+    font-size: 0.6em;
+    color: #8b949e;
+    text-align: right;
+    margin-top: 2px;
+}
+
 .section-header h2 { 
     color: #d4af37; 
     margin: 0; 
@@ -138,10 +215,22 @@ header {
     background: rgba(192, 57, 43, 0.05);
 }
 
-/* Timer en ventana ALIVE → verde activo */
+/* Timer en ventana ALIVE → verde con glow pulsante */
 .boss-row-alive {
     border-left-color: #2ecc71;
     background: rgba(46, 204, 113, 0.06);
+    animation: aliveRowGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes aliveRowGlow {
+    0%, 100% { 
+        border-left-color: #2ecc71;
+        box-shadow: -3px 0 8px rgba(46, 204, 113, 0.3);
+    }
+    50% { 
+        border-left-color: #5fffaa;
+        box-shadow: -3px 0 18px rgba(46, 204, 113, 0.7);
+    }
 }
 
 .boss-image { 
@@ -253,6 +342,12 @@ header {
     display: flex; 
     justify-content: space-between; 
     align-items: center;
+    animation: cardFadeIn 0.4s ease forwards;
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 
 .active-timer-card h3 { 
