@@ -699,6 +699,41 @@ function renderBossList(filter = "") {
         `}).join('');
 }
 
+// Actualiza la card "Next Boss" con el boss más próximo a spawnear
+// Se excluyen los bosses en fase ALIVE (ya spawnearon)
+// y los fixed schedule sin timer registrado (siempre están en el panel)
+function updateNextBoss() {
+    const card   = document.getElementById('next-boss-card');
+    const now    = getNow();
+
+    // Filtrar solo countdowns reales (no ALIVE, no pasados)
+    const upcoming = activeTimers
+        .filter(t => t.phase !== 'alive' && t.targetTime > now)
+        .sort((a, b) => a.targetTime - b.targetTime);
+
+    if (upcoming.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    const next = upcoming[0];
+    const boss = BOSSES.find(b => b.id === next.id);
+    if (!boss) { card.style.display = 'none'; return; }
+
+    const diff = next.targetTime - now;
+
+    document.getElementById('next-boss-img').src = `images/${boss.id}.png`;
+    document.getElementById('next-boss-img').onerror = function() {
+        this.src = 'https://via.placeholder.com/42/161b22/d4af37?text=B';
+    };
+    document.getElementById('next-boss-name').textContent     = boss.name.toUpperCase();
+    document.getElementById('next-boss-location').textContent = boss.location;
+    document.getElementById('next-boss-countdown').textContent = formatTime(diff);
+    document.getElementById('next-boss-time').textContent     = formatJST(next.targetTime);
+
+    card.style.display = 'flex';
+}
+
 function renderActivePanel() {
     const panel = document.getElementById('active-timers-display');
     const now = getNow();
@@ -787,6 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recomputeActiveTimers();
         updateBossRowClasses();
         checkSpawnNotifications();
+        updateNextBoss();
         renderActivePanel();
     }, 1000);
 });
