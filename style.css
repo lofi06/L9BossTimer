@@ -12,7 +12,7 @@ body {
     margin: 0;
     height: 100vh;
     overflow: hidden;
-    font-size: 1.0em; /* Reducción general de todas las fuentes */
+    font-size: 1.0em;
 }
 
 /* =======================================================
@@ -679,4 +679,169 @@ header {
     animation: alivePulse 1s ease-in-out infinite;
     font-size: 1em;
     letter-spacing: 1px;
+}
+
+
+/* =======================================================
+   RESPONSIVE — MÓVIL (max-width: 768px)
+   En móvil el layout cambia a una sola columna vertical.
+   Primero se muestra Active Timers, luego World Bosses.
+   El body permite scroll para ver toda la lista de bosses.
+   ======================================================= */
+@media (max-width: 768px) {
+
+    /* Permitir scroll vertical en móvil */
+    body {
+        height: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* Header más compacto */
+    header {
+        height: auto;
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .logo-text h1 {
+        font-size: 0.85em;
+        letter-spacing: 1px;
+    }
+
+    .server-time {
+        font-size: 0.65em;
+    }
+
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    #search-boss {
+        flex: 1;
+        width: auto;
+        font-size: 0.75em;
+        padding: 6px 10px;
+    }
+
+    .role-badge {
+        font-size: 0.55em;
+        padding: 2px 6px;
+    }
+
+    /* Layout vertical en lugar de horizontal */
+    .main-layout {
+        flex-direction: column;
+        height: auto;
+    }
+
+    /* Active Timers va primero en móvil (más importante) */
+    .active-timers-container {
+        order: -1;
+        min-width: unset;
+        width: 100%;
+        min-height: 280px;
+        max-height: 45vh;
+        border-right: none;
+        border-bottom: 1px solid #30363d;
+    }
+
+    /* World Bosses va abajo */
+    .boss-list-container {
+        width: 100%;
+        border-right: none;
+        min-height: 400px;
+    }
+
+    /* Containers con scroll propio */
+    #bosses-container,
+    #active-timers-display {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Next Boss card más compacta */
+    .next-boss-card {
+        margin: 8px 8px 0;
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .next-boss-name { font-size: 0.82em; }
+    .next-boss-countdown { font-size: 0.75em; }
+    .next-boss-time { font-size: 0.55em; }
+    .next-boss-img { width: 36px; height: 36px; }
+
+    /* Boss list rows más compactos */
+    .boss-tracker {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .boss-image {
+        width: 38px;
+        height: 38px;
+        margin-right: 8px;
+    }
+
+    .boss-info h2 { font-size: 0.9em; }
+    .subtitle-group { font-size: 0.68em; }
+    .interval-text,
+    .fixed-schedule-list { font-size: 0.68em; }
+
+    /* Botones más compactos */
+    .action-column { min-width: 70px; }
+
+    .mark-dead-btn,
+    .set-btn {
+        font-size: 0.7em;
+        padding: 4px 8px;
+    }
+
+    .fixed-badge { font-size: 0.68em; }
+
+    /* Active timer cards */
+    .active-timer-card {
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+
+    .active-timer-card h3 { font-size: 0.85em; }
+    .active-timer-card p  { font-size: 0.6em; }
+    .countdown-value      { font-size: 0.75em; }
+
+    /* Footer */
+    .footer-actions { padding: 10px; }
+    .guild-tag { font-size: 0.65em; }
+
+    /* Admin menu */
+    .admin-menu-btn {
+        font-size: 0.7em;
+        padding: 6px 10px;
+    }
+
+    .admin-dropdown {
+        right: 0;
+        min-width: 180px;
+    }
+
+    /* Section headers */
+    .section-header h2 { font-size: 0.85em; }
+
+    /* Welcome screen */
+    .welcome-box {
+        padding: 30px 24px;
+        gap: 16px;
+    }
+
+    .welcome-title { font-size: 1em; letter-spacing: 2px; }
+    .welcome-logo  { width: 60px; height: 60px; }
+
+    .pin-digit {
+        width: 42px;
+        height: 48px;
+        font-size: 1.2em;
+    }
 }
