@@ -278,7 +278,7 @@ function sendDiscord(embed) {
     fetch(CLOUDFLARE_WORKER, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: '@everyone', embeds: [embed] })
+        body: JSON.stringify({ embeds: [embed] })
     }).catch(() => {});
 }
 
@@ -350,7 +350,7 @@ function notifyDead(bossId) {
             { name: '⚔️ Level', value: `${boss.level}`, inline: true },
             { name: '🔄 Next Respawn (UTC+9)', value: nextRespawnJST, inline: false }
         ],
-        footer: { text: 'LordNine Boss Tracker' }
+        footer: { text: '@here — LordNine Boss Tracker' }
     });
 }
 
@@ -379,7 +379,7 @@ function notifyManualSet(bossId, spawnTimeUTC) {
             { name: '⚔️ Level', value: `${boss.level}`, inline: true },
             { name: '🔄 Expected Spawn (UTC+9)', value: spawnJST, inline: false }
         ],
-        footer: { text: 'LordNine Boss Tracker' }
+        footer: { text: '@here — LordNine Boss Tracker' }
     });
 }
 
